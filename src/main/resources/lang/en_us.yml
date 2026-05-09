@@ -1,0 +1,266 @@
+﻿common:
+  state:
+    enabled: '&#55FF55Enabled'
+    disabled: '&#FF5555Disabled'
+  none: 'none'
+  offline: 'offline'
+
+commands:
+  common:
+    no-permission: '&#FF5555You do not have permission to use this command.'
+  ymchat:
+    help:
+      - '&#FFAA00YmChat &#AAAAAA- available subcommands'
+      - '&#FFFF55/ymchat reload &#AAAAAAreload config, language, and GUI resources'
+      - '&#FFFF55/ymchat join &#AAAAAAjoin public chat'
+      - '&#FFFF55/ymchat leave &#AAAAAAleave public chat'
+      - '&#FFFF55/ymchat status &#AAAAAAshow runtime status'
+      - '&#FFFF55/ymchat channel <id> &#AAAAAAswitch channel'
+      - '&#FFFF55/ymchat debug [on|off] &#AAAAAAtoggle personal debug'
+      - '&#FFFF55/ymchat color &#AAAAAAshow current and available chat colors'
+      - '&#FFFF55/ymchat color <0-f|rgbId|off|reset> &#AAAAAAswitch fixed chat color'
+      - '&#FFFF55/ymchat megaphone <chat|title|bossbar> <message> &#AAAAAAsend a server-wide megaphone'
+      - '&#FFFF55/ymchat megaphone <give|take> <player> <amount> &#AAAAAAmanage megaphone balance'
+      - '&#FFFF55/ymchat logs [player:<name>] [channel:<id>] [keyword:<text>] [since:<1h|24h|7d>] [page:<n>] [limit:<n>] &#AAAAAAsearch cross-server chat logs'
+      - '&#FFFF55[i] [inv] [ec] [pos] &#AAAAAAshow an item, inventory, ender chest, or position in public chat'
+      - '&#FFFF55/展示 &#AAAAAAshow your main-hand item to the current channel'
+    reload:
+      no-permission: '&#FF5555You do not have permission to reload YmChat.'
+      success: '&#55FF55YmChat config, language, and GUI resources reloaded.'
+    join:
+      only-player: '&#FF5555Only players can join chat.'
+      success: '&#55FF55You are now participating in YmChat public chat.'
+    leave:
+      only-player: '&#FF5555Only players can leave chat.'
+      success: '&#FFFF55You are no longer participating in YmChat public chat.'
+    status:
+      auto-join: '&#AAAAAAAuto-Join: &#FFFFFF%value%'
+      force-legacy: '&#AAAAAAForce Legacy: &#FFFFFF%value%'
+      global-debug: '&#AAAAAAGlobal Debug: &#FFFFFF%value%'
+      language: '&#AAAAAALanguage: &#FFFFFF%value%'
+      participating: '&#AAAAAAParticipating: &#FFFFFF%value%'
+      channel: '&#AAAAAAChannel: &#FFFFFF%value%'
+      reply-target: '&#AAAAAAReply Target: &#FFFFFF%value%'
+      personal-debug: '&#AAAAAAPersonal Debug: &#FFFFFF%value%'
+      socialspy: '&#AAAAAASocialSpy: &#FFFFFF%value%'
+      chat-color: '&#AAAAAAChat Color: &#FFFFFF%value%'
+      saved-mode: '&#AAAAAASaved Mode: &#FFFFFF%value%'
+    channel:
+      only-player: '&#FF5555Only players can switch channels.'
+      current: '&#AAAAAACurrent channel: &#FFFFFF%channel%'
+      available: '&#AAAAAAAvailable channels: &#FFFFFF%channels%'
+    debug:
+      global-status: '&#AAAAAAGlobal Debug: &#FFFFFF%value%'
+      toggle-status: '&#AAAAAAChat Debug: %value%'
+    color:
+      only-player: '&#FF5555Only players can manage chat color.'
+      fixed-disabled: '&#FF5555Fixed chat color is disabled.'
+      no-permission: '&#FF5555You do not have permission to manage chat colors.'
+      usage: '&#FFFF55Usage: /ymchat color <colorCode|rgbId|off|reset>'
+      menu-removed: '&#FFFF55The color menu has been removed. Use commands to switch chat colors.'
+      'off': '&#FFFF55Fixed public chat color disabled.'
+      reset: '&#FFFF55Saved fixed color cleared. Rule defaults will be used again.'
+      no-permission-legacy: '&#FF5555You do not have permission to use color &#FFFFFF%color%&#FF5555.'
+      switched-legacy: '&#55FF55Public chat color switched to %color%&#55FF55.'
+      unknown: '&#FF5555Unknown chat color: &#FFFFFF%color%'
+      no-permission-rgb: '&#FF5555You do not have permission to use RGB color &#FFFFFF%color%&#FF5555.'
+      switched-rgb: '&#55FF55Public chat color switched to %color%&#55FF55.'
+      overview:
+        active: '&#AAAAAAActive Color: &#FFFFFF%value%'
+        saved-mode: '&#AAAAAASaved Mode: &#FFFFFF%value%'
+        legacy-colors: '&#AAAAAALegacy Colors: &#FFFFFF%value%'
+        rgb-colors: '&#AAAAAARGB Colors: &#FFFFFF%value%'
+      current:
+        manual-legacy: '%value%'
+        manual-rgb: '%value%'
+        manual-off: '&#FFFF55Fixed color disabled'
+        rule-default: '&#AAAAAAUsing rule default'
+      mode:
+        none: 'none'
+        legacy: 'legacy:%value%'
+        preset: 'preset:%value%'
+        rgb: 'rgb:%value%'
+        'off': 'off'
+    megaphone:
+      help:
+        - '&#FFAA00Megaphone &#AAAAAA- server-wide broadcasts'
+        - '&#FFFF55/ymchat megaphone balance &#AAAAAAshow your balance'
+        - '&#FFFF55/ymchat megaphone chat <message> &#AAAAAAsend a chat broadcast'
+        - '&#FFFF55/ymchat megaphone title <message> &#AAAAAAsend a title broadcast'
+        - '&#FFFF55/ymchat megaphone bossbar <message> &#AAAAAAsend a bossbar broadcast'
+        - '&#FFFF55/ymchat megaphone give <player> <amount> &#AAAAAAgive megaphones'
+        - '&#FFFF55/ymchat megaphone take <player> <amount> &#AAAAAAtake megaphones'
+      disabled: '&#FF5555Megaphones are disabled.'
+      only-player: '&#FF5555Only players can use megaphone broadcasts.'
+      no-permission: '&#FF5555You do not have permission to use megaphones.'
+      admin-no-permission: '&#FF5555You do not have permission to manage megaphones.'
+      no-mode-permission: '&#FF5555You do not have permission to use &#FFFFFF%mode%&#FF5555 broadcasts.'
+      mode-disabled: '&#FFFF55%mode% broadcasts are disabled.'
+      invalid-mode: '&#FF5555Unknown megaphone mode: &#FFFFFF%mode%'
+      missing-message: '&#FFFF55Please enter a message to broadcast.'
+      invalid-amount: '&#FF5555Invalid megaphone amount: &#FFFFFF%amount%'
+      not-enough: '&#FF5555Not enough megaphones. Required: &#FFFFFF%cost%&#FF5555, current: &#FFFFFF%balance%&#FF5555.'
+      unavailable: '&#FF5555Megaphone data is unavailable right now. Please try again later.'
+      sent: '&#55FF55Sent a &#FFFFFF%mode% &#55FF55broadcast. Cost: &#FFFFFF%cost%&#55FF55, remaining: &#FFFFFF%balance%&#55FF55.'
+      balance: '&#AAAAAAYour megaphone balance: &#FFFFFF%amount%'
+      target-balance: '&#AAAAAA%player% megaphone balance: &#FFFFFF%amount%'
+      give-usage: '&#FFFF55Usage: /ymchat megaphone give <player> <amount>'
+      take-usage: '&#FFFF55Usage: /ymchat megaphone take <player> <amount>'
+      give-success: '&#55FF55Gave &#FFFFFF%amount% &#55FF55megaphones to &#FFFFFF%player%&#55FF55. Balance: &#FFFFFF%balance%&#55FF55.'
+      take-success: '&#FFFF55Took &#FFFFFF%amount% &#FFFF55megaphones from &#FFFFFF%player%&#FFFF55. Balance: &#FFFFFF%balance%&#FFFF55.'
+      give-notify: '&#55FF55You received &#FFFFFF%amount% &#55FF55megaphones. Balance: &#FFFFFF%balance%&#55FF55.'
+      take-notify: '&#FFFF55You lost &#FFFFFF%amount% &#FFFF55megaphones. Balance: &#FFFFFF%balance%&#FFFF55.'
+      gui-resource: '&#FFFF55The megaphone GUI resource has been generated. Use commands to broadcast.'
+    logs:
+      help:
+        - '&#FFAA00YmChat Logs &#AAAAAA- search cross-server chat records'
+        - '&#FFFF55/ymchat logs &#AAAAAAshow recent cross-server chat records from the last 24 hours'
+        - '&#FFFF55/ymchat logs player:Tu_zi &#AAAAAAfilter by player name'
+        - '&#FFFF55/ymchat logs channel:staff since:6h &#AAAAAAfilter by channel and time window'
+        - '&#FFFF55/ymchat logs keyword:maintenance page:2 &#AAAAAAsearch by keyword and open page 2'
+      disabled: '&#FF5555Cross-server log search is disabled.'
+      no-permission: '&#FF5555You do not have permission to search cross-server logs.'
+      unavailable: '&#FF5555Cross-server chat storage is unavailable right now.'
+      invalid-argument: '&#FF5555Invalid log argument: &#FFFFFF%argument%'
+      no-results: '&#FFFF55No cross-server records matched this query.'
+      query-failed: '&#FF5555Cross-server log query failed. Check console for details.'
+      pagination:
+        previous: '&#555555[&#FFFF55Previous&#555555]'
+        previous-disabled: '&#555555[&#AAAAAAPrevious&#555555]'
+        next: '&#555555[&#FFFF55Next&#555555]'
+        next-disabled: '&#555555[&#AAAAAANext&#555555]'
+        hover: '&#AAAAAAClick to fill the next log query command'
+    showcase:
+      only-player: '&#FF5555Only players can open showcase previews.'
+      invalid: '&#FF5555Invalid showcase preview request.'
+      expired: '&#FF5555This showcase snapshot has expired or is unavailable.'
+      open-failed: '&#FF5555Failed to open the showcase snapshot. Please try again later.'
+  message:
+    only-player: '&#FF5555Only players can send private messages.'
+    usage: '&#FFFF55Usage: /%label% <player> <message>'
+  reply:
+    only-player: '&#FF5555Only players can reply to private messages.'
+    usage: '&#FFFF55Usage: /%label% <message>'
+  channel:
+    only-player: '&#FF5555Only players can switch channels.'
+    current: '&#AAAAAACurrent channel: &#FFFFFF%channel%'
+    available: '&#AAAAAAAvailable channels: &#FFFFFF%channels%'
+  socialspy:
+    only-player: '&#FF5555Only players can toggle SocialSpy.'
+    status: '&#AAAAAASocialSpy: %value%'
+
+service:
+  channel:
+    unknown: '&#FF5555Unknown channel: &#FFFFFF%channel%'
+    no-permission: '&#FF5555You do not have permission to join channel &#FFFFFF%channel%'
+    switched: '&#55FF55Switched to channel &#FFFFFF%channel%'
+
+private-messages:
+  format:
+    sender: '&#FF55FF[PM -> %target_name%] &#FFFFFF{message}'
+    receiver: '&#FF55FF[%player_name% -> You] &#FFFFFF{message}'
+    spy: '&#555555[Spy] &#FF55FF%player_name% -> %target_name%: &#FFFFFF{message}'
+  rules:
+    admin:
+      sender: '&#FF5555[Admin PM -> %target_name%] &#FFFFFF{message}'
+      receiver: '&#FF5555[%player_name% -> You] &#FFFFFF{message}'
+      spy: '&#555555[Admin Spy] &#FF5555%player_name% -> %target_name%: &#FFFFFF{message}'
+  messages:
+    disabled: '&#555555[&#FF5555!&#555555] &#FF5555Private messages are disabled on this server.'
+    no-reply-target: '&#555555[&#FF5555!&#555555] &#FF5555You do not have anyone to reply to.'
+    offline: '&#555555[&#FF5555!&#555555] &#FF5555Player %target_name% is offline.'
+    self: '&#555555[&#FF5555!&#555555] &#FF5555You cannot send a private message to yourself.'
+
+anti-spam:
+  messages:
+    too-fast: '&#555555[&#FF5555!&#555555] &#FF5555You are chatting too quickly.'
+    too-long: '&#555555[&#FF5555!&#555555] &#FF5555Your message is too long.'
+    too-many-caps: '&#555555[&#FF5555!&#555555] &#FF5555Please avoid excessive capital letters.'
+    duplicate: '&#555555[&#FF5555!&#555555] &#FF5555Please do not repeat the same message.'
+
+filter:
+  default-blocked-message: '&#555555[&#FF5555!&#555555] &#FF5555Your message contains blocked content.'
+  replacements:
+    soft: '**'
+    link: '[link]'
+
+mentions:
+  actionbar: '&#FFFF55You were mentioned by %sender%'
+
+debug:
+  chat: '&#555555[&#FFAA00YmChat Debug&#555555] &#AAAAAAchannel=&#FFFFFF%channel% &#AAAAAAformat=&#FFFFFF%format% &#AAAAAApriority=&#FFFFFF%priority% &#AAAAAArecipients=&#FFFFFF%recipients% &#AAAAAAmentions=&#FFFFFF%mentions% &#AAAAAAfilter=&#FFFFFF%filter% &#AAAAAAmode=&#FFFFFF%mode% &#AAAAAAspam=&#FFFFFF%spam%'
+  private: '&#555555[&#FFAA00YmChat Debug&#555555] &#AAAAAAprivate-to=&#FFFFFF%target% &#AAAAAArule=&#FFFFFF%rule% &#AAAAAApriority=&#FFFFFF%priority% &#AAAAAAfilter=&#FFFFFF%filter%'
+  spam-block: '&#555555[&#FFAA00YmChat Debug&#555555] &#FF5555Message blocked by anti-spam, reason: &#FFFFFF%reason%'
+  filter-block: '&#555555[&#FFAA00YmChat Debug&#555555] &#FF5555Filter blocked &#AAAAAAscope=&#FFFFFF%scope% &#AAAAAAchannel=&#FFFFFF%channel% &#AAAAAAhits=&#FFFFFF%hits%'
+  cross-server-publish: '&#555555[&#FFAA00YmChat Debug&#555555] &#AAAAAAcross-server=&#55FF55published &#AAAAAAchannel=&#FFFFFF%channel% &#AAAAAAorigin=&#FFFFFF%origin%'
+
+channels:
+  defaults:
+    global:
+      display: '&#555555[&#55FFFFGlobal&#555555] '
+    world:
+      display: '&#555555[&#FFAA00Megaphone&#555555] '
+    staff:
+      display: '&#555555[&#FF5555Staff&#555555] '
+
+cross-server:
+  server-name: 'Survival-1'
+  origin-format: '&#555555[&#55FFFF%origin_server%&#555555] '
+
+color-chat:
+  rgb:
+    pink:
+      display: '&#FF55FFPink'
+    sky:
+      display: '&#55CCFFSky'
+
+formats:
+  default:
+    msg:
+      hover: '&#AAAAAASent at: &#FFFFFF%server_time_h:mm:ss a%'
+    prefix:
+      text: '&#FFFFFF[&#00AAAA%multiverse-core_alias%&#FFFFFF]%tags_current% '
+      hover: '&#FFAA00Click to request teleport'
+      command: '/tpa %player_name%'
+    name:
+      op:
+        text: '&#FF5555%player_name%'
+      default:
+        text: '%luckperms_prefix%%player_name%'
+      hover: |-
+        &#AAAAAAPing: &#FFFFFF%player_ping% ms
+        &#AAAAAAHealth: &#FF5555%player_health_rounded% ❤
+        &#FFFF55Click to mention this player
+      suggest: '@%player_name% '
+    message:
+      admin: '&#FFFFFF: &#FF6B6B{message}'
+      vip4: '&#FFFFFF: &#D9A7FF{message}'
+      vip1: '&#FFFFFF: &#FFD54F{message}'
+      default: '&#FFFFFF: {message}'
+  world:
+    prefix:
+      text: '&#555555[&#FFAA00Megaphone&#555555] '
+    name:
+      text: '&#FFAA00%player_name%'
+    message:
+      default: '&#AAAAAA>> &#FFFFFF{message}'
+  staff:
+    prefix:
+      text: '&#555555[&#FF5555Staff&#555555] '
+    name:
+      text: '&#FF5555%player_name%'
+    message:
+      default: '&#FFFFFF: &#FF5555{message}'
+
+megaphone:
+  modes:
+    chat:
+      display: 'chat'
+      format: '&#555555[&#FFAA00Megaphone&#555555] &#55FF55%player_name%&#555555: &#FFFFFF%message%'
+    title:
+      display: 'title'
+      title: '&#FFAA00Megaphone'
+      subtitle: '&#55FF55%player_name%&#555555: &#FFFFFF%message%'
+    bossbar:
+      display: 'bossbar'
+      text: '&#FFAA00Megaphone &#555555| &#55FF55%player_name%&#555555: &#FFFFFF%message%'

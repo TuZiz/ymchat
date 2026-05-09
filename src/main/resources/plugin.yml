@@ -1,0 +1,250 @@
+# 玩家名或按钮名称的显示文本。
+name: YmChat
+# 插件版本，由构建系统在打包时替换。
+version: ${version}
+# 插件主类路径，Bukkit 会从这里启动插件。
+main: ym.ymchat.YmChatPlugin
+# 插件声明兼容的 Bukkit API 版本。
+api-version: "1.20"
+# 声明插件支持 Folia 区域线程调度。
+folia-supported: true
+# 插件作者列表。
+authors: [Codex]
+# 可选依赖列表，这些插件存在时会优先在其后加载。
+softdepend:
+  # 可选依赖插件名，安装后会在其后加载以便挂钩。
+  - PlaceholderAPI
+  # 可选依赖插件名，安装后会在其后加载以便挂钩。
+  - LuckPerms
+# 插件注册的命令列表，决定 Bukkit 能识别哪些根命令。
+commands:
+  # YmChat 主命令注册，包含 reload、channel、color、megaphone 和 logs 子命令。
+  ymchat:
+    # 命令在 Bukkit 帮助信息中的中文说明。
+    description: 'YmChat 主命令'
+    # 命令用法提示，玩家输入错误时会展示。
+    usage: '/ymchat <reload|join|leave|status|channel|debug|color|megaphone|logs>'
+  # 频道切换命令注册，玩家可用中文别名快速切换聊天频道。
+  channel:
+    # 命令在 Bukkit 帮助信息中的中文说明。
+    description: '切换当前聊天频道'
+    # 命令用法提示，玩家输入错误时会展示。
+    usage: '/频道 <频道>'
+    # 玩家可用于切换到该频道的中文别名和兼容短别名。
+    aliases: [频道]
+  # 私聊命令注册，用于向指定玩家发送私聊消息。
+  msg:
+    # 命令在 Bukkit 帮助信息中的中文说明。
+    description: '发送私聊消息'
+    # 命令用法提示，玩家输入错误时会展示。
+    usage: '/私聊 <玩家> <内容>'
+    # 玩家可用于切换到该频道的中文别名和兼容短别名。
+    aliases: [私聊]
+  # 私聊短命令注册，兼容习惯使用的 /m。
+  m:
+    # 命令在 Bukkit 帮助信息中的中文说明。
+    description: '发送私聊消息'
+    # 命令用法提示，玩家输入错误时会展示。
+    usage: '/私聊 <玩家> <内容>'
+  # 私聊兼容命令注册，兼容原版常见私聊入口。
+  tell:
+    # 命令在 Bukkit 帮助信息中的中文说明。
+    description: '发送私聊消息'
+    # 命令用法提示，玩家输入错误时会展示。
+    usage: '/私聊 <玩家> <内容>'
+  # 私聊短命令注册，兼容 /w 私聊习惯。
+  w:
+    # 命令在 Bukkit 帮助信息中的中文说明。
+    description: '发送私聊消息'
+    # 命令用法提示，玩家输入错误时会展示。
+    usage: '/私聊 <玩家> <内容>'
+  # 回复命令注册，用于回复上一名私聊对象。
+  reply:
+    # 命令在 Bukkit 帮助信息中的中文说明。
+    description: '回复上一名私聊玩家'
+    # 命令用法提示，玩家输入错误时会展示。
+    usage: '/回复 <内容>'
+    # 玩家可用于切换到该频道的中文别名和兼容短别名。
+    aliases: [回复]
+  # 私聊监听命令注册，供管理员切换监听状态。
+  socialspy:
+    # 命令在 Bukkit 帮助信息中的中文说明。
+    description: '切换私聊监听'
+    # 命令用法提示，玩家输入错误时会展示。
+    usage: '/私聊监听'
+    # 玩家可用于切换到该频道的中文别名和兼容短别名。
+    aliases: [私聊监听]
+  # 展示命令注册，用于把主手物品展示到当前公共频道。
+  showitem:
+    # 命令在 Bukkit 帮助信息中的中文说明。
+    description: '展示主手物品到当前公共聊天频道'
+    # 命令用法提示，玩家输入错误时会展示。
+    usage: '/展示'
+    # 玩家可用于切换到该频道的中文别名和兼容短别名。
+    aliases: [展示]
+# 插件注册的权限节点列表，决定默认权限归属。
+permissions:
+  # 基础使用权限，允许玩家使用 YmChat 常规功能。
+  ymchat.use:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: true
+  # 重载权限，允许管理员重新加载配置和语言文件。
+  ymchat.reload:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 管理频道权限，允许进入 staff 频道。
+  ymchat.channel.staff:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 私聊监听权限，允许查看私聊监听内容。
+  ymchat.socialspy:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 反刷屏绕过权限，适合管理组或信任组。
+  ymchat.bypass.antispam:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 聊天过滤绕过权限，允许跳过过滤规则。
+  ymchat.filter.bypass:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 全体提醒权限，允许使用 @all 之类提醒。
+  ymchat.mention.everyone:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 大喇叭基础权限，允许打开和使用喊话功能。
+  ymchat.megaphone.use:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: true
+  # 聊天栏大喇叭权限，允许使用聊天栏喊话。
+  ymchat.megaphone.chat:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: true
+  # 标题大喇叭权限，允许使用屏幕标题喊话。
+  ymchat.megaphone.title:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: true
+  # 顶部栏大喇叭权限，允许使用 BossBar 喊话。
+  ymchat.megaphone.bossbar:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: true
+  # 大喇叭管理权限，允许发放和扣除玩家余额。
+  ymchat.megaphone.admin:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 聊天颜色基础权限，允许玩家切换固定聊天颜色。
+  ymchat.color.use:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: true
+  # 传统内联颜色权限，允许使用 & 颜色码。
+  ymchat.color.inline.legacy:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 格式内联权限，允许使用加粗等样式码。
+  ymchat.color.inline.format:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # RGB 内联权限，允许在聊天中使用十六进制颜色。
+  ymchat.color.inline.rgb:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.0:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.1:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.2:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.3:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.4:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.5:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.6:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.7:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.8:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.9:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.a:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.b:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.c:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.d:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.e:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 权限节点注册，控制对应功能默认开放给谁。
+  ymchat.color.f:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 物品展示权限，允许展示主手物品。
+  ymchat.item.showcase:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: true
+  # 物品展示冷却绕过权限。
+  ymchat.item.showcase.bypass:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 背包展示权限，允许分享背包快照。
+  ymchat.showcase.inventory:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: true
+  # 背包展示冷却绕过权限。
+  ymchat.showcase.inventory.bypass:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 末影箱展示权限，允许分享末影箱快照。
+  ymchat.showcase.enderchest:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: true
+  # 末影箱展示冷却绕过权限。
+  ymchat.showcase.enderchest.bypass:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 坐标展示权限，允许在聊天中展示坐标。
+  ymchat.showcase.position:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: true
+  # 坐标展示冷却绕过权限。
+  ymchat.showcase.position.bypass:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 跨服日志查询权限，允许查看聊天日志。
+  ymchat.logs:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op

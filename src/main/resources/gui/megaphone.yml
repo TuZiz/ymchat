@@ -1,0 +1,64 @@
+Title: '&#FFB833大喇叭喊话'
+Rows: 5
+Shape:
+  - "#########"
+  - "#ctb###i#"
+  - "#vvv###h#"
+  - "#       #"
+  - "####x####"
+Key:
+  "#":
+    material: BLACK_STAINED_GLASS_PANE
+    name: ' '
+  "c":
+    action: suggest
+    material: PAPER
+    name: '&#55E690聊天栏喊话'
+    lore:
+      - '&#B0B0B0消耗: &#FFFFFF1 个大喇叭'
+      - '&#B0B0B0位置: &#FFFFFF聊天栏'
+      - '&#FFD700点击填充喊话命令'
+    command: '/ymchat megaphone chat '
+  "t":
+    action: suggest
+    material: OAK_SIGN
+    name: '&#FFB833标题喊话'
+    lore:
+      - '&#B0B0B0消耗: &#FFFFFF3 个大喇叭'
+      - '&#B0B0B0位置: &#FFFFFF屏幕标题'
+      - '&#FFD700点击填充喊话命令'
+    command: '/ymchat megaphone title '
+  "b":
+    action: suggest
+    material: BELL
+    name: '&#FFD700顶部栏喊话'
+    lore:
+      - '&#B0B0B0消耗: &#FFFFFF5 个大喇叭'
+      - '&#B0B0B0位置: &#FFFFFF屏幕顶部栏'
+      - '&#FFD700点击填充喊话命令'
+    command: '/ymchat megaphone bossbar '
+  "v":
+    action: none
+    material: AMETHYST_SHARD
+    name: '&#33CCFF剩余大喇叭: &#FFFFFF%megaphone_balance%'
+    lore:
+      - '&#B0B0B0管理员可使用发放或扣除指令调整数量.'
+      - '&#FFD700/ymchat megaphone balance'
+  "h":
+    action: suggest
+    material: BOOK
+    name: '&#FFB833大喇叭帮助'
+    lore:
+      - '&#B0B0B0查看三种喊话和管理命令.'
+    command: '/ymchat megaphone help'
+  "i":
+    action: none
+    material: PRISMARINE_SHARD
+    name: '&#55E690使用规则'
+    lore:
+      - '&#B0B0B0切换到大喇叭频道后发言会消耗聊天栏次数.'
+      - '&#B0B0B0标题和顶部栏喊话消耗更多.'
+  "x":
+    action: close
+    material: BARRIER
+    name: '&#FF6B6B关闭'

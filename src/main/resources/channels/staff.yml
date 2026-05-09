@@ -1,0 +1,7 @@
+id: staff
+display: '&#777777[&#FF6B6B管理&#777777] '
+target: ALL
+permission: 'ymchat.channel.staff'
+format: staff
+cross-server: false
+aliases: ['管理', 's']

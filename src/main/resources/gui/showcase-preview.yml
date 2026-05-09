@@ -1,0 +1,43 @@
+Inventory:
+  Title: '&#555555%player_name% 的背包快照'
+  Shape:
+    - "##aaaao##"
+    - "sssssssss"
+    - "sssssssss"
+    - "sssssssss"
+    - "hhhhhhhhh"
+    - "###S#X###"
+
+Ender-Chest:
+  Title: '&#555555%player_name% 的末影箱快照'
+  Shape:
+    - "#########"
+    - "eeeeeeeee"
+    - "eeeeeeeee"
+    - "eeeeeeeee"
+    - "###S#X###"
+
+Key:
+  "#":
+    material: BLACK_STAINED_GLASS_PANE
+    name: ' '
+  "S":
+    action: summary
+    material: BOOK
+    name: '&#33CCFF快照信息'
+    lore:
+      - '&#B0B0B0发送者: &#FFFFFF%player_name%'
+      - '&#B0B0B0来源服务器: &#FFFFFF%server_name%'
+      - '&#B0B0B0快照类型: &#FFFFFF%snapshot_type%'
+      - '&#B0B0B0创建时间: &#FFFFFF%created_at%'
+  "X":
+    action: close
+    material: BARRIER
+    name: '&#FF6B6B✖ 关闭预览'
+    lore:
+      - '&#B0B0B0关闭这个展示快照界面。'
+
+Types:
+  inventory: '背包'
+  ender-chest: '末影箱'
+  none: '无'

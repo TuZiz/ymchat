@@ -1,0 +1,346 @@
+﻿common:
+  state:
+    enabled: '&#55E690✔ 开启'
+    disabled: '&#FF6B6B✖ 关闭'
+  none: '无'
+  offline: '离线'
+
+commands:
+  common:
+    no-permission: '&#FF6B6B✖ 你没有权限使用这个命令。'
+  ymchat:
+    help:
+      - '&#FFB833◆ YmChat &#B0B0B0- 可用子命令'
+      - ' &#777777▪ &#FFD700/ymchat reload &#B0B0B0重载配置、语言和界面'
+      - ' &#777777▪ &#FFD700/ymchat join &#B0B0B0加入公共聊天'
+      - ' &#777777▪ &#FFD700/ymchat leave &#B0B0B0离开公共聊天'
+      - ' &#777777▪ &#FFD700/ymchat status &#B0B0B0查看运行状态'
+      - ' &#777777▪ &#FFD700/ymchat channel <频道> &#B0B0B0切换聊天频道'
+      - ' &#777777▪ &#FFD700/ymchat debug [on|off] &#B0B0B0切换个人调试'
+      - ' &#777777▪ &#FFD700/ymchat color &#B0B0B0查看当前颜色和可用颜色'
+      - ' &#777777▪ &#FFD700/ymchat color <代码|预设|off|reset> &#B0B0B0切换固定聊天颜色'
+      - ' &#777777▪ &#FFD700/ymchat megaphone <chat|title|bossbar> <内容> &#B0B0B0使用大喇叭全服喊话'
+      - ' &#777777▪ &#FFD700/ymchat megaphone <give|take> <玩家> <数量> &#B0B0B0管理大喇叭次数'
+      - ' &#777777▪ &#FFD700/ymchat logs [player:<玩家>] [channel:<频道>] [keyword:<内容>] [since:<1h|24h|7d>] [page:<页>] [limit:<数量>] &#B0B0B0检索跨服聊天记录'
+      - ' &#777777▪ &#FFD700/展示 &#B0B0B0展示主手物品到当前频道'
+      - ' &#777777▪ &#FFD700[物品] [背包] [末影箱] [坐标] &#B0B0B0在聊天中展示相应内容'
+    reload:
+      no-permission: '&#FF6B6B✖ 你没有权限重载 YmChat。'
+      success: '&#55E690✔ YmChat 配置、语言和界面已成功重载。'
+    join:
+      only-player: '&#FF6B6B✖ 只有玩家可以加入聊天。'
+      success: '&#55E690✔ 你已成功加入 YmChat 公共聊天。'
+    leave:
+      only-player: '&#FF6B6B✖ 只有玩家可以离开聊天。'
+      success: '&#FFD700ℹ 你已离开 YmChat 公共聊天。'
+    status:
+      auto-join: '&#B0B0B0自动加入: &#FFFFFF%value%'
+      force-legacy: '&#B0B0B0强制传统发送: &#FFFFFF%value%'
+      global-debug: '&#B0B0B0全局调试: &#FFFFFF%value%'
+      language: '&#B0B0B0当前语言: &#FFFFFF%value%'
+      participating: '&#B0B0B0是否参与聊天: &#FFFFFF%value%'
+      channel: '&#B0B0B0当前频道: &#FFFFFF%value%'
+      reply-target: '&#B0B0B0回复目标: &#FFFFFF%value%'
+      personal-debug: '&#B0B0B0个人调试: &#FFFFFF%value%'
+      socialspy: '&#B0B0B0私聊监听: &#FFFFFF%value%'
+      chat-color: '&#B0B0B0聊天颜色: &#FFFFFF%value%'
+      saved-mode: '&#B0B0B0保存模式: &#FFFFFF%value%'
+    channel:
+      only-player: '&#FF6B6B✖ 只有玩家可以切换频道。'
+      current: '&#B0B0B0当前频道: &#33CCFF%channel%'
+      available: '&#B0B0B0可用频道: &#FFFFFF%channels%'
+    debug:
+      global-status: '&#B0B0B0全局调试: &#FFFFFF%value%'
+      toggle-status: '&#B0B0B0聊天调试: %value%'
+    color:
+      only-player: '&#FF6B6B✖ 只有玩家可以管理聊天颜色。'
+      fixed-disabled: '&#FF6B6B✖ 固定聊天颜色功能已关闭。'
+      no-permission: '&#FF6B6B✖ 你没有权限管理聊天颜色。'
+      usage: '&#FFD700ℹ 用法: /ymchat color <颜色代码|彩色预设|off|reset>'
+      menu-removed: '&#FFD700ℹ 颜色菜单已移除，请使用指令切换聊天颜色。'
+      'off': '&#FFD700ℹ 已关闭固定公共聊天颜色。'
+      reset: '&#FFD700ℹ 已清除保存的固定颜色，将重新使用规则默认颜色。'
+      no-permission-legacy: '&#FF6B6B✖ 你没有权限使用颜色 &#FFFFFF%color%&#FF6B6B。'
+      switched-legacy: '&#55E690✔ 公共聊天颜色已切换为 %color%&#55E690。'
+      unknown: '&#FF6B6B✖ 未知聊天颜色: &#FFFFFF%color%'
+      no-permission-rgb: '&#FF6B6B✖ 你没有权限使用彩色预设 &#FFFFFF%color%&#FF6B6B。'
+      switched-rgb: '&#55E690✔ 公共聊天颜色已切换为 %color%&#55E690。'
+      overview:
+        active: '&#B0B0B0当前颜色: &#FFFFFF%value%'
+        saved-mode: '&#B0B0B0保存模式: &#FFFFFF%value%'
+        legacy-colors: '&#B0B0B0传统颜色: &#FFFFFF%value%'
+        rgb-colors: '&#B0B0B0彩色预设: &#FFFFFF%value%'
+      current:
+        manual-legacy: '%value%'
+        manual-rgb: '%value%'
+        manual-off: '&#FFD700固定颜色已关闭'
+        rule-default: '&#B0B0B0使用规则默认'
+      mode:
+        none: '无'
+        legacy: '传统颜色:%value%'
+        preset: '彩色预设:%value%'
+        rgb: '自定义颜色:%value%'
+        'off': '已关闭'
+    megaphone:
+      help:
+        - '&#FFB833◆ 大喇叭 &#B0B0B0- 全服喊话'
+        - ' &#777777▪ &#FFD700/ymchat megaphone balance &#B0B0B0查看剩余次数'
+        - ' &#777777▪ &#FFD700/ymchat megaphone chat <内容> &#B0B0B0发送聊天栏喊话'
+        - ' &#777777▪ &#FFD700/ymchat megaphone title <内容> &#B0B0B0发送屏幕标题喊话'
+        - ' &#777777▪ &#FFD700/ymchat megaphone bossbar <内容> &#B0B0B0发送屏幕顶部栏喊话'
+        - ' &#777777▪ &#FFD700/ymchat megaphone give <玩家> <数量> &#B0B0B0发放大喇叭次数'
+        - ' &#777777▪ &#FFD700/ymchat megaphone take <玩家> <数量> &#B0B0B0扣除大喇叭次数'
+      disabled: '&#FF6B6B✖ 大喇叭功能已关闭。'
+      only-player: '&#FF6B6B✖ 只有玩家可以使用大喇叭喊话。'
+      no-permission: '&#FF6B6B✖ 你没有权限使用大喇叭。'
+      admin-no-permission: '&#FF6B6B✖ 你没有权限管理大喇叭次数。'
+      no-mode-permission: '&#FF6B6B✖ 你没有权限使用 &#FFFFFF%mode%&#FF6B6B 喊话。'
+      mode-disabled: '&#FFD700ℹ &#FFFFFF%mode% &#FFD700喊话当前已关闭。'
+      invalid-mode: '&#FF6B6B✖ 未知大喇叭模式: &#FFFFFF%mode%'
+      missing-message: '&#FFD700ℹ 请输入要喊话的内容。'
+      invalid-amount: '&#FF6B6B✖ 无效的大喇叭数量: &#FFFFFF%amount%'
+      not-enough: '&#FF6B6B✖ 大喇叭数量不足，本次需要 &#FFFFFF%cost% &#FF6B6B个，你当前只有 &#FFFFFF%balance% &#FF6B6B个。'
+      unavailable: '&#FF6B6B✖ 大喇叭数据当前不可用，请稍后再试。'
+      sent: '&#55E690✔ 已发送 &#FFFFFF%mode% &#55E690喊话，消耗 &#FFFFFF%cost% &#55E690个，剩余 &#FFFFFF%balance% &#55E690个。'
+      balance: '&#B0B0B0你当前剩余大喇叭: &#FFFFFF%amount% &#B0B0B0个'
+      target-balance: '&#B0B0B0玩家 &#FFFFFF%player% &#B0B0B0剩余大喇叭: &#FFFFFF%amount% &#B0B0B0个'
+      give-usage: '&#FFD700ℹ 用法: /ymchat megaphone give <玩家> <数量>'
+      take-usage: '&#FFD700ℹ 用法: /ymchat megaphone take <玩家> <数量>'
+      give-success: '&#55E690✔ 已给 &#FFFFFF%player% &#55E690发放 &#FFFFFF%amount% &#55E690个大喇叭，当前剩余 &#FFFFFF%balance% &#55E690个。'
+      take-success: '&#FFD700ℹ 已从 &#FFFFFF%player% &#FFD700扣除 &#FFFFFF%amount% &#FFD700个大喇叭，当前剩余 &#FFFFFF%balance% &#FFD700个。'
+      give-notify: '&#55E690✔ 你获得了 &#FFFFFF%amount% &#55E690个大喇叭，当前剩余 &#FFFFFF%balance% &#55E690个。'
+      take-notify: '&#FFD700ℹ 你被扣除了 &#FFFFFF%amount% &#FFD700个大喇叭，当前剩余 &#FFFFFF%balance% &#FFD700个。'
+      gui-resource: '&#FFD700ℹ 大喇叭菜单资源已生成，请使用指令进行喊话。'
+    logs:
+      help:
+        - '&#FFB833◆ YmChat 日志 &#B0B0B0- 检索跨服聊天记录'
+        - ' &#777777▪ &#FFD700/ymchat logs &#B0B0B0查看最近 24 小时聊天记录'
+        - ' &#777777▪ &#FFD700/ymchat logs player:小明 &#B0B0B0按玩家名筛选'
+        - ' &#777777▪ &#FFD700/ymchat logs channel:管理 since:6h &#B0B0B0按频道和时间筛选'
+        - ' &#777777▪ &#FFD700/ymchat logs keyword:维护 page:2 &#B0B0B0按关键词检索翻页'
+      disabled: '&#FF6B6B✖ 跨服日志检索功能已关闭。'
+      no-permission: '&#FF6B6B✖ 你没有权限检索跨服聊天记录。'
+      unavailable: '&#FF6B6B✖ 跨服聊天数据库当前不可用。'
+      invalid-argument: '&#FF6B6B✖ 无效的日志参数: &#FFFFFF%argument%'
+      no-results: '&#FFD700ℹ 没有匹配到相关的跨服聊天记录。'
+      query-failed: '&#FF6B6B✖ 跨服日志查询失败，请查看控制台报错。'
+      pagination:
+        previous: '&#777777[&#FFD700◀ 上一页&#777777]'
+        previous-disabled: '&#777777[&#555555◀ 上一页&#777777]'
+        next: '&#777777[&#FFD700下一页 ▶&#777777]'
+        next-disabled: '&#777777[&#555555下一页 ▶&#777777]'
+        hover: '&#B0B0B0点击填充下一条日志查询命令'
+      filters:
+        player: '玩家'
+        channel: '频道'
+        keyword: '关键词'
+        since: '时间'
+        page: '页数'
+        limit: '数量'
+    showcase:
+      only-player: '&#FF6B6B✖ 只有玩家可以打开展示预览。'
+      invalid: '&#FF6B6B✖ 无效的展示预览请求。'
+      expired: '&#FF6B6B✖ 这个展示快照已经失效或不可用。'
+      open-failed: '&#FF6B6B✖ 打开展示快照失败，请稍后再试。'
+  message:
+    only-player: '&#FF6B6B✖ 只有玩家可以发送私聊。'
+    usage: '&#FFD700ℹ 用法: /私聊 <玩家> <内容>'
+  reply:
+    only-player: '&#FF6B6B✖ 只有玩家可以回复私聊。'
+    usage: '&#FFD700ℹ 用法: /回复 <内容>'
+  channel:
+    only-player: '&#FF6B6B✖ 只有玩家可以切换频道。'
+    current: '&#B0B0B0当前频道: &#33CCFF%channel%'
+    available: '&#B0B0B0可用频道: &#FFFFFF%channels%'
+  socialspy:
+    only-player: '&#FF6B6B✖ 只有玩家可以切换私聊监听。'
+    status: '&#B0B0B0私聊监听: %value%'
+
+service:
+  channel:
+    unknown: '&#FF6B6B✖ 未知频道: &#FFFFFF%channel%'
+    no-permission: '&#FF6B6B✖ 你没有权限进入频道 &#FFFFFF%channel%'
+    switched: '&#55E690✔ 已切换到频道 &#33CCFF%channel%'
+
+private-messages:
+  format:
+    sender: '&#FF99CC[私聊 ➔ %target_name%] &#FFFFFF{message}'
+    receiver: '&#FF99CC[%player_name% ➔ 你] &#FFFFFF{message}'
+    spy: '&#777777[监听] &#FF99CC%player_name% ➔ %target_name%: &#FFFFFF{message}'
+  rules:
+    admin:
+      sender: '&#FF6B6B[管理私聊 ➔ %target_name%] &#FFFFFF{message}'
+      receiver: '&#FF6B6B[%player_name% ➔ 你] &#FFFFFF{message}'
+      spy: '&#777777[管理监听] &#FF6B6B%player_name% ➔ %target_name%: &#FFFFFF{message}'
+  messages:
+    disabled: '&#777777[&#FF6B6B!&#777777] &#FF6B6B当前服务器已关闭私聊功能。'
+    no-reply-target: '&#777777[&#FF6B6B!&#777777] &#FF6B6B你当前没有可以回复的玩家。'
+    offline: '&#777777[&#FF6B6B!&#777777] &#FF6B6B玩家 %target_name% 当前不在线。'
+    self: '&#777777[&#FF6B6B!&#777777] &#FF6B6B你不能给自己发送私聊。'
+
+anti-spam:
+  messages:
+    too-fast: '&#777777[&#FFD700!&#777777] &#FFD700你说话太快了，请稍后再试。'
+    too-long: '&#777777[&#FFD700!&#777777] &#FFD700你的消息太长了，请精简一下。'
+    too-many-caps: '&#777777[&#FFD700!&#777777] &#FFD700请不要发送过多的大写字母。'
+    duplicate: '&#777777[&#FFD700!&#777777] &#FFD700请不要重复发送相同的消息。'
+
+filter:
+  default-blocked-message: '&#777777[&#FF6B6B!&#777777] &#FF6B6B你的消息包含违规或被禁止的内容。'
+  replacements:
+    soft: '***'
+    link: '[链接]'
+
+mentions:
+  actionbar: '&#FFD700✦ 你被 %sender% 提及了 ✦'
+
+debug:
+  chat: '&#777777[&#FFB833YmChat 调试&#777777] &#B0B0B0频道=&#FFFFFF%channel% &#B0B0B0格式=&#FFFFFF%format% &#B0B0B0优先级=&#FFFFFF%priority% &#B0B0B0接收者=&#FFFFFF%recipients% &#B0B0B0提及=&#FFFFFF%mentions% &#B0B0B0过滤=&#FFFFFF%filter% &#B0B0B0模式=&#FFFFFF%mode% &#B0B0B0反刷屏=&#FFFFFF%spam%'
+  private: '&#777777[&#FFB833YmChat 调试&#777777] &#B0B0B0私聊目标=&#FFFFFF%target% &#B0B0B0规则=&#FFFFFF%rule% &#B0B0B0优先级=&#FFFFFF%priority% &#B0B0B0过滤=&#FFFFFF%filter%'
+  spam-block: '&#777777[&#FFB833YmChat 调试&#777777] &#FF6B6B消息被反刷屏拦截，原因: &#FFFFFF%reason%'
+  filter-block: '&#777777[&#FFB833YmChat 调试&#777777] &#FF6B6B过滤器拦截 &#B0B0B0范围=&#FFFFFF%scope% &#B0B0B0频道=&#FFFFFF%channel% &#B0B0B0命中=&#FFFFFF%hits%'
+  cross-server-publish: '&#777777[&#FFB833YmChat 调试&#777777] &#B0B0B0跨服=&#55E690已发布 &#B0B0B0频道=&#FFFFFF%channel% &#B0B0B0来源=&#FFFFFF%origin%'
+  values:
+    default: '默认'
+    mode:
+      legacy: '传统发送'
+      auto: '自动'
+    spam:
+      allowed: '通过'
+      max-length: '超出长度'
+      caps-ratio: '大写过多'
+      cooldown: '冷却中'
+      duplicate: '重复内容'
+    mentions:
+      everyone: '所有人'
+    scope:
+      public: '公共聊天'
+      private: '私聊'
+
+channels:
+  defaults:
+    global:
+      display: '&#777777[&#33CCFF全服&#777777] '
+    world:
+      display: '&#777777[&#FFB833大喇叭&#777777] '
+    staff:
+      display: '&#777777[&#FF6B6B管理&#777777] '
+
+cross-server:
+  server-name: '生存-1'
+  origin-format: '&#777777[&#33CCFF%origin_server%&#777777] '
+  logs:
+    header-format: '&#777777[&#FFB833日志&#777777] &#B0B0B0筛选: &#FFFFFF%filters% &#777777(&#FFFFFF%count%&#777777)'
+    line-format: '&#777777[&#B0B0B0%time%&#777777] &#B0B0B0[%server%/%channel%] &#FFFFFF%sender%&#777777: &#FFFFFF%message%'
+    hover-format:
+      - '&#B0B0B0记录编号: &#FFFFFF%id%'
+      - '&#B0B0B0时间: &#FFFFFF%time_exact%'
+      - '&#B0B0B0服务器标识: &#FFFFFF%server_id%'
+      - '&#B0B0B0频道: &#FFFFFF%channel%'
+      - '&#B0B0B0玩家: &#FFFFFF%sender%'
+      - '&#FFD700点击复制完整记录'
+    footer-format: '%previous% &#B0B0B0第 &#FFFFFF%page%/%pages% &#B0B0B0页 %next%'
+
+item-showcase:
+  command-message: '展示了 [物品]'
+  messages:
+    disabled: '&#777777[&#FF6B6B!&#777777] &#FF6B6B展示功能当前已关闭。'
+    only-player: '&#777777[&#FF6B6B!&#777777] &#FF6B6B只有玩家可以展示聊天内容。'
+  item:
+    text: '&#FFD700[{item_name} &#B0B0B0x{amount}&#FFD700]'
+    messages:
+      no-permission: '&#777777[&#FF6B6B!&#777777] &#FF6B6B你没有权限展示物品。'
+      empty-hand: '&#777777[&#FF6B6B!&#777777] &#FF6B6B你主手上没有可以展示的物品。'
+      cooldown: '&#777777[&#FFD700!&#777777] &#FFD700展示物品太频繁了，请 %remaining_seconds% 秒后再试。'
+  snapshot:
+    text: '&#B0B0B0[预览]'
+    messages:
+      no-permission: '&#777777[&#FF6B6B!&#777777] &#FF6B6B你没有权限展示这个内容。'
+      empty: '&#777777[&#FF6B6B!&#777777] &#FF6B6B当前没有可展示的内容。'
+      cooldown: '&#777777[&#FFD700!&#777777] &#FFD700展示太频繁了，请 %remaining_seconds% 秒后再试。'
+  inventory:
+    text: '&#33CCFF[背包]'
+    hover:
+      - '&#B0B0B0玩家: &#FFFFFF%player_name%'
+      - '&#33CCFF点击查看背包快照'
+    messages:
+      no-permission: '&#777777[&#FF6B6B!&#777777] &#FF6B6B你没有权限展示背包。'
+      empty: '&#777777[&#FF6B6B!&#777777] &#FF6B6B当前没有可展示的背包内容。'
+      cooldown: '&#777777[&#FFD700!&#777777] &#FFD700展示背包太频繁了，请 %remaining_seconds% 秒后再试。'
+  ender-chest:
+    text: '&#D9A7FF[末影箱]'
+    hover:
+      - '&#B0B0B0玩家: &#FFFFFF%player_name%'
+      - '&#D9A7FF点击查看末影箱快照'
+    messages:
+      no-permission: '&#777777[&#FF6B6B!&#777777] &#FF6B6B你没有权限展示末影箱。'
+      empty: '&#777777[&#FF6B6B!&#777777] &#FF6B6B当前没有可展示的末影箱内容。'
+      cooldown: '&#777777[&#FFD700!&#777777] &#FFD700展示末影箱太频繁了，请 %remaining_seconds% 秒后再试。'
+  position:
+    text: '&#55E690[%world% %x% %y% %z%]'
+    hover:
+      - '&#B0B0B0玩家: &#FFFFFF%player_name%'
+      - '&#B0B0B0世界: &#FFFFFF%world%'
+      - '&#B0B0B0坐标: &#FFFFFF%x%, %y%, %z%'
+      - '&#FFD700点击复制坐标'
+    messages:
+      no-permission: '&#777777[&#FF6B6B!&#777777] &#FF6B6B你没有权限展示坐标。'
+      cooldown: '&#777777[&#FFD700!&#777777] &#FFD700展示坐标太频繁了，请 %remaining_seconds% 秒后再试。'
+
+color-chat:
+  rgb:
+    pink:
+      display: '&#FF99CC粉色'
+    sky:
+      display: '&#33CCFF天蓝'
+
+formats:
+  default:
+    msg:
+      hover: '&#B0B0B0发送时间: &#FFFFFF%server_time_H:mm:ss%'
+    prefix:
+      text: '&#FFFFFF[&#00AAAA%multiverse-core_alias%&#FFFFFF]%tags_current% '
+      hover: '&#FFB833点击请求传送'
+      command: '/tpa %player_name%'
+    name:
+      op:
+        text: '&#FF6B6B%player_name%'
+      default:
+        text: '%luckperms_prefix%%player_name%'
+      hover: |-
+        &#B0B0B0网络延迟: &#55E690%player_ping% 毫秒
+        &#B0B0B0当前血量: &#FF6B6B%player_health_rounded% ❤
+        &#FFD700点击提及这名玩家
+      suggest: '@%player_name% '
+    message:
+      admin: '&#FFFFFF: &#FF6B6B{message}'
+      vip4: '&#FFFFFF: &#D9A7FF{message}'
+      vip1: '&#FFFFFF: &#F2D349{message}'
+      default: '&#FFFFFF: &#E0E0E0{message}'
+  world:
+    prefix:
+      text: '&#777777[&#FFB833大喇叭&#777777] '
+    name:
+      text: '&#FFB833%player_name%'
+    message:
+      default: '&#777777» &#FFFFFF{message}'
+  staff:
+    prefix:
+      text: '&#777777[&#FF6B6B管理&#777777] '
+    name:
+      text: '&#FF6B6B%player_name%'
+    message:
+      default: '&#FFFFFF: &#FF6B6B{message}'
+
+megaphone:
+  modes:
+    chat:
+      display: '聊天栏'
+      format: '&#777777[&#FFB833大喇叭&#777777] &#55E690%player_name%&#777777: &#FFFFFF%message%'
+    title:
+      display: '标题'
+      title: '&#FFB833大喇叭'
+      subtitle: '&#55E690%player_name%&#777777: &#FFFFFF%message%'
+    bossbar:
+      display: '顶部栏'
+      text: '&#FFB833大喇叭 &#777777| &#55E690%player_name%&#777777: &#FFFFFF%message%'

@@ -1,0 +1,6 @@
+id: global
+display: '&#777777[&#33CCFF全服&#777777] '
+target: ALL
+format: default
+cross-server: true
+aliases: ['全服', 'g']

@@ -1,0 +1,6 @@
+id: world
+display: '&#777777[&#FFB833大喇叭&#777777] '
+target: ALL
+format: world
+cross-server: false
+aliases: ['大喇叭', '喇叭', '喊话', 'w']

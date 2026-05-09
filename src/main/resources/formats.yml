@@ -1,0 +1,57 @@
+Formats:
+  - id: default
+    channel: global
+    condition: ~
+    priority: 100
+    msg:
+      default-color: '&f'
+      hover: '&#B0B0B0发送时间: &#FFFFFF%server_time_H:mm:ss%'
+    prefix:
+      text: '&#FFFFFF[&#00AAAA%multiverse-core_alias%&#FFFFFF]%tags_current% '
+      hover: '&#FFB833点击请求传送'
+      command: '/tpa %player_name%'
+    name:
+      - condition: 'player op'
+        text: '&#FF6B6B%player_name%'
+        hover: "&#B0B0B0网络延迟: &#55E690%player_ping% 毫秒\n&#B0B0B0当前血量: &#FF6B6B%player_health_rounded% ❤\n&#FFD700点击提及这名玩家"
+        suggest: '@%player_name% '
+      - text: '%luckperms_prefix%%player_name%'
+        hover: "&#B0B0B0网络延迟: &#55E690%player_ping% 毫秒\n&#B0B0B0当前血量: &#FF6B6B%player_health_rounded% ❤\n&#FFD700点击提及这名玩家"
+        suggest: '@%player_name% '
+    message:
+      variants:
+        - condition: 'perm "group.admin"'
+          text: '&#FFFFFF: &#FF6B6B{message}'
+        - condition: 'perm "group.vip4"'
+          text: '&#FFFFFF: &#D9A7FF{message}'
+        - condition: 'perm "group.vip1"'
+          text: '&#FFFFFF: &#F2D349{message}'
+        - text: '&#FFFFFF: &#E0E0E0{message}'
+
+  - id: world
+    channel: world
+    condition: ~
+    priority: 100
+    msg:
+      default-color: '&f'
+    prefix:
+      text: '&#777777[&#FFB833大喇叭&#777777] '
+    name:
+      - text: '&#FFB833%player_name%'
+    message:
+      variants:
+        - text: '&#777777» &#FFFFFF{message}'
+
+  - id: staff
+    channel: staff
+    condition: ~
+    priority: 100
+    msg:
+      default-color: '&f'
+    prefix:
+      text: '&#777777[&#FF6B6B管理&#777777] '
+    name:
+      - text: '&#FF6B6B%player_name%'
+    message:
+      variants:
+        - text: '&#FFFFFF: &#FF6B6B{message}'
