@@ -16,6 +16,7 @@ import ym.ymchat.config.ChatConfigLoader;
 import ym.ymchat.config.ChatPluginConfig;
 import ym.ymchat.config.chat.ChatChannel;
 import ym.ymchat.config.chat.SectionStyle;
+import ym.ymchat.config.color.ColorPreset;
 import ym.ymchat.service.color.PlayerColorPreference;
 import ym.ymchat.service.color.PlayerColorService;
 
@@ -71,6 +72,46 @@ class ChatRendererTest {
         assertTrue(json.contains("\"color\":\"#ff00ff\""));
         assertFalse(json.contains("\"color\":\"#ff00ff\",\"text\":\"[vip] \""));
         assertFalse(json.contains("\"text\":\"[vip] \",\"color\":\"#ff00ff\""));
+    }
+
+    @Test
+    void rendersGradientNameColorOnlyInsideNameTokens() {
+        YamlConfiguration yaml = new YamlConfiguration();
+        yaml.set("Channels.List", List.of(Map.of("id", "global", "format", "default")));
+        yaml.set("Channels.Formats", List.of(Map.of(
+            "id", "default",
+            "channel", "global",
+            "priority", 10,
+            "name", List.of(Map.of("text", "%luckperms_prefix%{name_color}%player_name%{name_reset}")),
+            "message", Map.of("variants", List.of(Map.of("text", "&#FFFFFF: {message}")))
+        )));
+        ChatPluginConfig config = new ChatConfigLoader().load(yaml);
+        ChatRenderer renderer = new ChatRenderer(
+            (player, input) -> input
+                .replace("%luckperms_prefix%", "&6[VIP] ")
+                .replace("%player_name%", "Al"),
+            (player, ignored) -> new PlayerColorService.ResolvedColor(
+                "&#AA1122",
+                PlayerColorService.ColorSource.MANUAL_RGB,
+                PlayerColorPreference.rgb("rainbow"),
+                new ColorPreset(
+                    "rainbow",
+                    "Rainbow",
+                    "ymchat.namecolor.rgb.rainbow",
+                    "#FFFFFF",
+                    List.of("#AA1122", "#2244CC")
+                )
+            )
+        );
+
+        ChatRenderer.RenderedChat rendered = renderer.render(fakePlayer(), config.defaultChannel(), Component.text("hello"), config);
+        String json = GsonComponentSerializer.gson().serialize(rendered.component()).toLowerCase(Locale.ROOT);
+
+        assertTrue(json.contains("\"text\":\"[vip] \""));
+        assertTrue(json.contains("\"color\":\"#aa1122\""));
+        assertTrue(json.contains("\"color\":\"#2244cc\""));
+        assertFalse(json.contains("\"text\":\"[vip] \",\"color\":\"#aa1122\""));
+        assertFalse(json.contains("\"text\":\"[vip] \",\"color\":\"#2244cc\""));
     }
 
     private Player fakePlayer() {

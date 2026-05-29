@@ -14,6 +14,7 @@ import ym.ymchat.config.ChatPluginConfig;
 import ym.ymchat.config.chat.FormatRule;
 import ym.ymchat.config.chat.MessageOptions;
 import ym.ymchat.config.chat.SectionStyle;
+import ym.ymchat.service.color.ColorGradientUtil;
 import ym.ymchat.service.color.PlayerColorService;
 import ym.ymchat.service.platform.DependencyBridge;
 import ym.ymchat.service.text.RichText;
@@ -191,13 +192,7 @@ public final class ChatRenderer {
             return resolve(player, input);
         }
         PlayerColorService.ResolvedColor resolvedColor = nameColorProvider.resolve(player, config);
-        String color = resolvedColor == null || resolvedColor.baseColorValue() == null || resolvedColor.baseColorValue().isBlank()
-            ? "&f"
-            : resolvedColor.baseColorValue();
-        String withNameTokens = input
-            .replace("{name_color}", color)
-            .replace("{name_reset}", "&r");
-        return resolve(player, withNameTokens);
+        return ColorGradientUtil.applyNameColorTokens(resolve(player, input), resolvedColor, "&f");
     }
 
     static boolean shouldIncludeCrossServerPrefix(SectionStyle section) {

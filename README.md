@@ -141,9 +141,22 @@ Condition expressions support:
 - 默认配置和 GUI 文件的展示文案保持内联，方便服主直接改；旧服已经写过的语言键引用仍会兼容解析。
 - Fixed colors are defined once in `colors.yml` under `Colors.rgb-colors`. The default file includes `0` through `f`; removing an entry removes it from command selection.
 - Players can only select color ids declared in `colors.yml`; arbitrary values are rejected until they are added there.
+- A color entry may define `gradient.colors`; `value` remains the solid fallback used when a gradient cannot be applied.
 - Chat color switching is command-only. Use `/ymchat color` to view available values, `/ymchat color <colorId>` to switch, `/ymchat color off` to turn fixed color off, and `/ymchat color reset` to clear the saved preference.
 - Each shared color has separate `chat-permission` and `name-permission` entries.
 - Name color tokens only apply where the selected name section includes `{name_color}` and `{name_reset}`.
 - Name color switching is command-only. Use `/ymchat namecolor` to view available values, `/ymchat namecolor <colorId>` to switch, `/ymchat namecolor off` to turn fixed name color off, and `/ymchat namecolor reset` to clear the saved preference.
+
+```yml
+Colors:
+  rgb-colors:
+    - id: rainbow
+      display: '&#FF5555Rainbow'
+      value: '#FFFFFF'
+      gradient:
+        colors: ['#FF5555', '#FFFF55', '#55FF55', '#55FFFF', '#5555FF']
+      chat-permission: 'ymchat.color.rgb.rainbow'
+      name-permission: 'ymchat.namecolor.rgb.rainbow'
+```
 - `/展示` and `[i]` still only read the main-hand item; `[inv]`, `[ec]`, and `[pos]` are also public-chat-only tokens.
 - Inventory and ender chest showcase previews use `gui/showcase-preview.yml`, stay read-only, and can be opened across servers when cross-server chat storage is enabled.

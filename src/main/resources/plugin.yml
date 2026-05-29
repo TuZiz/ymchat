@@ -216,6 +216,12 @@ permissions:
   ymchat.color.f:
     # 权限默认归属，true 为所有人，op 为管理员。
     default: op
+  ymchat.color.rgb.pink:
+    default: op
+  ymchat.color.rgb.sky:
+    default: op
+  ymchat.color.rgb.rainbow:
+    default: op
   # 玩家名字颜色基础权限。
   ymchat.namecolor.use:
     default: true
@@ -254,6 +260,8 @@ permissions:
   ymchat.namecolor.rgb.pink:
     default: op
   ymchat.namecolor.rgb.sky:
+    default: op
+  ymchat.namecolor.rgb.rainbow:
     default: op
   # 物品展示权限，允许展示主手物品。
   ymchat.item.showcase:

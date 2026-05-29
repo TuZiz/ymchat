@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Locale;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.junit.jupiter.api.Test;
+import ym.ymchat.config.color.ColorPreset;
+import ym.ymchat.service.color.PlayerColorPreference;
 import ym.ymchat.service.color.PlayerColorService;
 import ym.ymchat.service.color.PublicChatColorService;
 import ym.ymchat.service.text.RichText;
@@ -79,5 +81,33 @@ class PublicChatColorServiceTest {
 
         assertEquals("hello", prepared.visiblePlainText());
         assertEquals("\u00a7e\u00a7lhello", RichText.serializeToSection(prepared.toComponent()));
+    }
+
+    @Test
+    void appliesConfiguredGradientAcrossMessageText() {
+        PublicChatColorService.PreparedPublicChatMessage prepared = service.prepare(
+            "ab",
+            "&f",
+            new PlayerColorService.ResolvedColor(
+                "&#AA1122",
+                PlayerColorService.ColorSource.MANUAL_RGB,
+                PlayerColorPreference.rgb("rainbow"),
+                new ColorPreset(
+                    "rainbow",
+                    "Rainbow",
+                    "ymchat.color.rgb.rainbow",
+                    "#FFFFFF",
+                    java.util.List.of("#AA1122", "#2244CC")
+                )
+            ),
+            new PublicChatColorService.PermissionAccess(false, false, false)
+        );
+
+        String json = GsonComponentSerializer.gson().serialize(prepared.toComponent()).toLowerCase(Locale.ROOT);
+
+        assertEquals("ab", prepared.visiblePlainText());
+        assertTrue(prepared.spans().getFirst().hasGradient());
+        assertTrue(json.contains("\"color\":\"#aa1122\""));
+        assertTrue(json.contains("\"color\":\"#2244cc\""));
     }
 }

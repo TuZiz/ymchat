@@ -72,7 +72,7 @@ public final class ChatMessageProcessor {
             .toList();
 
         PublicChatColorService.PreparedPublicChatMessage finalMessage = filtered.modified()
-            ? plugin.getPublicChatColorService().plain(filtered.message(), resolvedColor.baseColorValue())
+            ? plugin.getPublicChatColorService().plain(filtered.message(), resolvedColor, defaultColor)
             : prepared;
         MentionService.MentionResult mentionResult = plugin.getMentionService().extractMentions(sender, filtered.message(), config.mentionSettings());
         PublicChatColorService.PreparedPublicChatMessage highlightedMessage = plugin.getPublicChatHighlightService().apply(

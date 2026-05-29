@@ -25,8 +25,9 @@ public final class PublicChatColorService {
         if (baseColorValue == null) {
             baseColorValue = "&f";
         }
+        List<String> baseGradientColors = ColorGradientUtil.gradientColors(resolvedColor);
 
-        FormattingState state = new FormattingState(baseColorValue);
+        FormattingState state = new FormattingState(baseColorValue, baseGradientColors);
         List<TextSpan> spans = new ArrayList<>();
         StringBuilder visible = new StringBuilder();
         StringBuilder formatted = new StringBuilder();
@@ -40,7 +41,7 @@ public final class PublicChatColorService {
             String rgbAmpersand = matchAmpersandRgb(input, index);
             if (rgbAmpersand != null) {
                 if (permissions.rgbAllowed()) {
-                    flush(spans, currentText, state);
+                    flush(spans, currentText, state, visible.length());
                     state.applyColor("&#" + rgbAmpersand);
                     formatted.append("&#").append(rgbAmpersand);
                     usedInlineFormatting = true;
@@ -56,7 +57,7 @@ public final class PublicChatColorService {
             String rgbMini = matchMiniRgb(input, index);
             if (rgbMini != null) {
                 if (permissions.rgbAllowed()) {
-                    flush(spans, currentText, state);
+                    flush(spans, currentText, state, visible.length());
                     state.applyColor("&#" + rgbMini);
                     formatted.append("&#").append(rgbMini);
                     usedInlineFormatting = true;
@@ -72,7 +73,7 @@ public final class PublicChatColorService {
             String colorTagRgb = matchColorTagRgb(input, index);
             if (colorTagRgb != null) {
                 if (permissions.rgbAllowed()) {
-                    flush(spans, currentText, state);
+                    flush(spans, currentText, state, visible.length());
                     state.applyColor("&#" + colorTagRgb);
                     formatted.append("&#").append(colorTagRgb);
                     usedInlineFormatting = true;
@@ -87,7 +88,7 @@ public final class PublicChatColorService {
 
             if (matchesIgnoreCase(input, index, "</color>")) {
                 if (permissions.rgbAllowed()) {
-                    flush(spans, currentText, state);
+                    flush(spans, currentText, state, visible.length());
                     state.reset();
                     formatted.append("&r");
                     usedInlineFormatting = true;
@@ -101,7 +102,7 @@ public final class PublicChatColorService {
 
             if (matchesIgnoreCase(input, index, "<reset>")) {
                 if (permissions.rgbAllowed()) {
-                    flush(spans, currentText, state);
+                    flush(spans, currentText, state, visible.length());
                     state.reset();
                     formatted.append("&r");
                     usedInlineFormatting = true;
@@ -116,7 +117,7 @@ public final class PublicChatColorService {
             String closeMiniRgb = matchCloseMiniRgb(input, index);
             if (closeMiniRgb != null) {
                 if (permissions.rgbAllowed()) {
-                    flush(spans, currentText, state);
+                    flush(spans, currentText, state, visible.length());
                     state.reset();
                     formatted.append("&r");
                     usedInlineFormatting = true;
@@ -133,7 +134,7 @@ public final class PublicChatColorService {
                 char code = input.charAt(index + 1);
                 if (ColorCodeUtil.isLegacyColorCode(code)) {
                     if (permissions.legacyAllowed()) {
-                        flush(spans, currentText, state);
+                        flush(spans, currentText, state, visible.length());
                         if (Character.toLowerCase(code) == 'r') {
                             state.reset();
                         } else {
@@ -151,7 +152,7 @@ public final class PublicChatColorService {
 
                 if (ColorCodeUtil.isLegacyFormatCode(code)) {
                     if (permissions.formatAllowed()) {
-                        flush(spans, currentText, state);
+                        flush(spans, currentText, state, visible.length());
                         state.applyFormat(Character.toLowerCase(code));
                         formatted.append('&').append(Character.toLowerCase(code));
                         usedInlineFormatting = true;
@@ -171,23 +172,48 @@ public final class PublicChatColorService {
             index++;
         }
 
-        flush(spans, currentText, state);
+        flush(spans, currentText, state, visible.length());
+        List<TextSpan> finalSpans = spans.stream()
+            .map(span -> span.withGradientLength(visible.length()))
+            .toList();
         return new PreparedPublicChatMessage(
             visible.toString(),
             formatted.toString(),
             baseColorValue,
             usedInlineFormatting,
             hadUnauthorizedFormatting,
-            List.copyOf(spans)
+            finalSpans
         );
     }
 
     public PreparedPublicChatMessage plain(String visiblePlainText, String baseColorValue) {
+        return plain(visiblePlainText, baseColorValue, List.of());
+    }
+
+    public PreparedPublicChatMessage plain(
+        String visiblePlainText,
+        PlayerColorService.ResolvedColor resolvedColor,
+        String defaultColor
+    ) {
+        String baseColorValue = resolvedColor == null ? defaultColor : resolvedColor.baseColorValue();
+        return plain(visiblePlainText, baseColorValue, ColorGradientUtil.gradientColors(resolvedColor));
+    }
+
+    private PreparedPublicChatMessage plain(String visiblePlainText, String baseColorValue, List<String> gradientColors) {
         String normalizedBaseColor = ColorCodeUtil.normalizeBaseColorValue(baseColorValue);
         String text = visiblePlainText == null ? "" : visiblePlainText;
         List<TextSpan> spans = text.isEmpty()
             ? List.of()
-            : List.of(new TextSpan(text, normalizedBaseColor == null ? "&f" : normalizedBaseColor, "", null, null));
+            : List.of(new TextSpan(
+                text,
+                normalizedBaseColor == null ? "&f" : normalizedBaseColor,
+                "",
+                null,
+                null,
+                gradientColors,
+                0,
+                text.length()
+            ));
         return new PreparedPublicChatMessage(
             text,
             text,
@@ -204,11 +230,21 @@ public final class PublicChatColorService {
         formatted.append(literal);
     }
 
-    private void flush(List<TextSpan> spans, StringBuilder currentText, FormattingState state) {
+    private void flush(List<TextSpan> spans, StringBuilder currentText, FormattingState state, int visibleLength) {
         if (currentText.isEmpty()) {
             return;
         }
-        spans.add(new TextSpan(currentText.toString(), state.currentColorValue(), state.formatCodeSuffix(), null, null));
+        int gradientStart = Math.max(0, visibleLength - currentText.length());
+        spans.add(new TextSpan(
+            currentText.toString(),
+            state.currentColorValue(),
+            state.formatCodeSuffix(),
+            null,
+            null,
+            state.currentGradientColors(),
+            gradientStart,
+            0
+        ));
         currentText.setLength(0);
     }
 
@@ -260,20 +296,25 @@ public final class PublicChatColorService {
     private static final class FormattingState {
 
         private final String baseColorValue;
+        private final List<String> baseGradientColors;
         private String currentColorValue;
+        private List<String> currentGradientColors;
         private boolean obfuscated;
         private boolean bold;
         private boolean strikethrough;
         private boolean underlined;
         private boolean italic;
 
-        private FormattingState(String baseColorValue) {
+        private FormattingState(String baseColorValue, List<String> baseGradientColors) {
             this.baseColorValue = baseColorValue;
+            this.baseGradientColors = ColorGradientUtil.normalizeGradientColors(baseGradientColors);
             this.currentColorValue = baseColorValue;
+            this.currentGradientColors = this.baseGradientColors;
         }
 
         private void applyColor(String colorValue) {
             currentColorValue = colorValue;
+            currentGradientColors = List.of();
             obfuscated = false;
             bold = false;
             strikethrough = false;
@@ -283,6 +324,7 @@ public final class PublicChatColorService {
 
         private void reset() {
             currentColorValue = baseColorValue;
+            currentGradientColors = baseGradientColors;
             obfuscated = false;
             bold = false;
             strikethrough = false;
@@ -304,6 +346,10 @@ public final class PublicChatColorService {
 
         private String currentColorValue() {
             return currentColorValue;
+        }
+
+        private List<String> currentGradientColors() {
+            return currentGradientColors;
         }
 
         private String formatCodeSuffix() {
@@ -330,10 +376,89 @@ public final class PublicChatColorService {
     public record PermissionAccess(boolean legacyAllowed, boolean formatAllowed, boolean rgbAllowed) {
     }
 
-    public record TextSpan(String text, String colorValue, String formatCodes, Component hover, ClickEvent click) {
+    public record TextSpan(
+        String text,
+        String colorValue,
+        String formatCodes,
+        Component hover,
+        ClickEvent click,
+        List<String> gradientColors,
+        int gradientStart,
+        int gradientLength
+    ) {
+
+        public TextSpan {
+            text = text == null ? "" : text;
+            formatCodes = formatCodes == null ? "" : formatCodes;
+            gradientColors = ColorGradientUtil.normalizeGradientColors(gradientColors);
+            gradientStart = Math.max(0, gradientStart);
+            gradientLength = gradientLength <= 0 ? text.length() : gradientLength;
+        }
+
+        public TextSpan(String text, String colorValue, String formatCodes, Component hover, ClickEvent click) {
+            this(text, colorValue, formatCodes, hover, click, List.of(), 0, 0);
+        }
 
         public String stylePrefix() {
             return (colorValue == null ? "" : colorValue) + (formatCodes == null ? "" : formatCodes);
+        }
+
+        public boolean hasGradient() {
+            return gradientColors.size() >= 2;
+        }
+
+        public TextSpan slice(int start, int end) {
+            int safeStart = Math.max(0, Math.min(start, text.length()));
+            int safeEnd = Math.max(safeStart, Math.min(end, text.length()));
+            return new TextSpan(
+                text.substring(safeStart, safeEnd),
+                colorValue,
+                formatCodes,
+                hover,
+                click,
+                gradientColors,
+                gradientStart + safeStart,
+                gradientLength
+            );
+        }
+
+        public TextSpan withGradientLength(int length) {
+            return new TextSpan(text, colorValue, formatCodes, hover, click, gradientColors, gradientStart, length);
+        }
+
+        public TextSpan withTextAndStyle(
+            String newText,
+            String newColorValue,
+            String newFormatCodes,
+            Component newHover,
+            ClickEvent newClick,
+            List<String> newGradientColors,
+            int newGradientStart
+        ) {
+            return new TextSpan(
+                newText,
+                newColorValue,
+                newFormatCodes,
+                newHover,
+                newClick,
+                newGradientColors,
+                newGradientStart,
+                gradientLength
+            );
+        }
+
+        public Component toComponent() {
+            if (hasGradient()) {
+                return ColorGradientUtil.component(text, gradientColors, gradientStart, gradientLength, formatCodes, hover, click);
+            }
+            Component component = Component.text(text).style(RichText.styleOf(stylePrefix()));
+            if (hover != null) {
+                component = component.hoverEvent(HoverEvent.showText(hover));
+            }
+            if (click != null) {
+                component = component.clickEvent(click);
+            }
+            return component;
         }
     }
 
@@ -352,14 +477,7 @@ public final class PublicChatColorService {
                 if (span.text() == null || span.text().isEmpty()) {
                     continue;
                 }
-                Component component = Component.text(span.text()).style(RichText.styleOf(span.stylePrefix()));
-                if (span.hover() != null) {
-                    component = component.hoverEvent(HoverEvent.showText(span.hover()));
-                }
-                if (span.click() != null) {
-                    component = component.clickEvent(span.click());
-                }
-                builder.append(component);
+                builder.append(span.toComponent());
             }
             return builder.build();
         }

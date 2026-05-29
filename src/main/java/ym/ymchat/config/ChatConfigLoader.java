@@ -382,7 +382,8 @@ public final class ChatConfigLoader {
                     color.id(),
                     localizedString(color.display(), color.display()),
                     color.permission(),
-                    color.value()
+                    color.value(),
+                    color.gradientColors()
                 ))
                 .toList();
         }
@@ -440,8 +441,24 @@ public final class ChatConfigLoader {
                 asString(asMap(map.get("permissions")).get(scopedKey), ""),
                 defaultPermission
             ),
-            asString(map.get("value"), "")
+            asString(map.get("value"), ""),
+            parseGradientColors(map)
         );
+    }
+
+    private List<String> parseGradientColors(Map<?, ?> map) {
+        Object gradient = map.get("gradient");
+        if (gradient instanceof Map<?, ?> gradientMap) {
+            return rawStringList(gradientMap.get("colors"));
+        }
+        if (gradient instanceof List<?>) {
+            return rawStringList(gradient);
+        }
+        List<String> colors = rawStringList(map.get("gradient-colors"));
+        if (!colors.isEmpty()) {
+            return colors;
+        }
+        return rawStringList(map.get("colors"));
     }
 
     private String defaultRgbPermission(String scopeKey, String id) {

@@ -186,12 +186,12 @@ public final class PublicChatHighlightService {
             for (int offset = 0; offset < spanText.length(); offset++) {
                 HighlightStyle current = globalIndex + offset < coverage.length ? coverage[globalIndex + offset] : null;
                 if (!sameStyle(active, current)) {
-                    rebuilt.add(buildSpan(span, spanText.substring(localStart, offset), active));
+                    rebuilt.add(buildSpan(span, spanText.substring(localStart, offset), active, localStart));
                     localStart = offset;
                     active = current;
                 }
             }
-            rebuilt.add(buildSpan(span, spanText.substring(localStart), active));
+            rebuilt.add(buildSpan(span, spanText.substring(localStart), active, localStart));
             globalIndex += spanText.length();
         }
 
@@ -203,18 +203,23 @@ public final class PublicChatHighlightService {
     private PublicChatColorService.TextSpan buildSpan(
         PublicChatColorService.TextSpan base,
         String text,
-        HighlightStyle highlight
+        HighlightStyle highlight,
+        int localStart
     ) {
+        PublicChatColorService.TextSpan segment = base.slice(localStart, localStart + text.length());
         if (highlight == null) {
-            return new PublicChatColorService.TextSpan(text, base.colorValue(), base.formatCodes(), base.hover(), base.click());
+            return segment;
         }
-        String color = highlight.colorValue() == null ? base.colorValue() : highlight.colorValue();
-        return new PublicChatColorService.TextSpan(
+        String color = highlight.colorValue() == null ? segment.colorValue() : highlight.colorValue();
+        List<String> gradientColors = highlight.colorValue() == null ? segment.gradientColors() : List.of();
+        return segment.withTextAndStyle(
             text,
             color,
-            mergeFormatCodes(base.formatCodes(), highlight.formatCodes()),
-            highlight.hover() == null ? base.hover() : highlight.hover(),
-            highlight.click() == null ? base.click() : highlight.click()
+            mergeFormatCodes(segment.formatCodes(), highlight.formatCodes()),
+            highlight.hover() == null ? segment.hover() : highlight.hover(),
+            highlight.click() == null ? segment.click() : highlight.click(),
+            gradientColors,
+            segment.gradientStart()
         );
     }
 

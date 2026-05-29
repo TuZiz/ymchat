@@ -17,6 +17,7 @@ import ym.ymchat.YmChatPlugin;
 import ym.ymchat.config.chat.ChatChannel;
 import ym.ymchat.config.megaphone.MegaphoneMode;
 import ym.ymchat.config.megaphone.MegaphoneSettings;
+import ym.ymchat.service.color.ColorGradientUtil;
 import ym.ymchat.service.color.ColorScope;
 import ym.ymchat.service.color.PlayerColorService;
 import ym.ymchat.service.text.PlaceholderResolver;
@@ -314,29 +315,23 @@ public final class MegaphoneService {
 
     private String placeholders(Player sender, String message, String template) {
         String resolved = template == null || template.isBlank() ? "%message%" : template;
-        String nameColor = resolveNameColor(sender);
-        String withNameTokens = resolved
-            .replace("{name_color}", nameColor)
-            .replace("{name_reset}", "&r")
-            .replace("%message%", MESSAGE_TOKEN_PLACEHOLDER);
-        return PlaceholderResolver.resolve(sender, withNameTokens).replace(MESSAGE_TOKEN_PLACEHOLDER, message);
+        String withMessageToken = resolved.replace("%message%", MESSAGE_TOKEN_PLACEHOLDER);
+        String withPlaceholders = PlaceholderResolver.resolve(sender, withMessageToken);
+        return ColorGradientUtil.applyNameColorTokens(withPlaceholders, resolveNameColor(sender), "&f")
+            .replace(MESSAGE_TOKEN_PLACEHOLDER, message);
     }
 
-    private String resolveNameColor(Player sender) {
+    private PlayerColorService.ResolvedColor resolveNameColor(Player sender) {
         PlayerColorService colorService = plugin.getPlayerColorService();
         if (colorService == null || plugin.getChatConfig() == null) {
-            return "&f";
+            return null;
         }
-        PlayerColorService.ResolvedColor resolvedColor = colorService.resolve(
+        return colorService.resolve(
             sender,
             ColorScope.NAME,
             plugin.getChatConfig().nameColorSettings(),
             "&f"
         );
-        if (resolvedColor == null || resolvedColor.baseColorValue() == null || resolvedColor.baseColorValue().isBlank()) {
-            return "&f";
-        }
-        return resolvedColor.baseColorValue();
     }
 
     private String modeDisplay(MegaphoneSettings.ModeSettings modeSettings, MegaphoneMode mode) {

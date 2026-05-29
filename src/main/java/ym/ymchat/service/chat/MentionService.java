@@ -228,6 +228,10 @@ public final class MentionService {
             return;
         }
         String text = span.text().substring(start, end);
+        if (highlightColor == null) {
+            builder.append(span.slice(start, end).toComponent());
+            return;
+        }
         String stylePrefix = highlightColor == null
             ? span.stylePrefix()
             : highlightPrefix(span, highlightColor.asHexString());

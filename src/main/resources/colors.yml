@@ -13,6 +13,7 @@ Name-Color:
 
 Colors:
   rgb-colors:
+    # ================= 原版基础颜色 (Legacy) =================
     - id: '0'
       display: '&#000000黑色'
       value: '&0'
@@ -93,13 +94,96 @@ Colors:
       value: '&f'
       chat-permission: 'ymchat.color.f'
       name-permission: 'ymchat.namecolor.f'
+
+    # ================= 进阶美化颜色 (Custom RGB) =================
+    - id: rainbow
+      display: '&#FF5555彩虹渐变'
+      value: '#FFFFFF'
+      gradient:
+        colors:
+          - '#FF5555'
+          - '#FFFF55'
+          - '#55FF55'
+          - '#55FFFF'
+          - '#5555FF'
+          - '#FF55FF'
+      chat-permission: 'ymchat.color.rgb.rainbow'
+      name-permission: 'ymchat.namecolor.rgb.rainbow'
     - id: pink
-      display: '&#FF99CC粉色'
+      display: '&#FF99CC基础粉'
       value: '#FF55FF'
       chat-permission: 'ymchat.color.rgb.pink'
       name-permission: 'ymchat.namecolor.rgb.pink'
     - id: sky
-      display: '&#33CCFF天蓝'
+      display: '&#33CCFF基础蓝'
       value: '#55CCFF'
       chat-permission: 'ymchat.color.rgb.sky'
       name-permission: 'ymchat.namecolor.rgb.sky'
+
+    # >>>>> 新增高颜值色系 <<<<<
+
+    # 【马卡龙 / 柔和色系】
+    - id: sakura
+      display: '&#FFB7C5樱花粉'
+      value: '#FFB7C5'
+      chat-permission: 'ymchat.color.rgb.sakura'
+      name-permission: 'ymchat.namecolor.rgb.sakura'
+    - id: mint
+      display: '&#98FF98薄荷绿'
+      value: '#98FF98'
+      chat-permission: 'ymchat.color.rgb.mint'
+      name-permission: 'ymchat.namecolor.rgb.mint'
+    - id: lavender
+      display: '&#B57EDC薰衣草'
+      value: '#B57EDC'
+      chat-permission: 'ymchat.color.rgb.lavender'
+      name-permission: 'ymchat.namecolor.rgb.lavender'
+    - id: peach
+      display: '&#FFCBA4蜜桃色'
+      value: '#FFCBA4'
+      chat-permission: 'ymchat.color.rgb.peach'
+      name-permission: 'ymchat.namecolor.rgb.peach'
+    - id: milk
+      display: '&#FDFFF5奶白色'
+      value: '#FDFFF5'
+      chat-permission: 'ymchat.color.rgb.milk'
+      name-permission: 'ymchat.namecolor.rgb.milk'
+
+    # 【自然 / 风景颜色】
+    - id: sunset
+      display: '&#FF4E50落日橙'
+      value: '#FF4E50'
+      chat-permission: 'ymchat.color.rgb.sunset'
+      name-permission: 'ymchat.namecolor.rgb.sunset'
+    - id: ocean
+      display: '&#008080深海蓝'
+      value: '#008080'
+      chat-permission: 'ymchat.color.rgb.ocean'
+      name-permission: 'ymchat.namecolor.rgb.ocean'
+    - id: matcha
+      display: '&#B0D36B抹茶绿'
+      value: '#B0D36B'
+      chat-permission: 'ymchat.color.rgb.matcha'
+      name-permission: 'ymchat.namecolor.rgb.matcha'
+    - id: coral
+      display: '&#FF7F50珊瑚红'
+      value: '#FF7F50'
+      chat-permission: 'ymchat.color.rgb.coral'
+      name-permission: 'ymchat.namecolor.rgb.coral'
+
+    # 【尊贵 / 质感颜色】
+    - id: champagne
+      display: '&#F7E7CE香槟金'
+      value: '#F7E7CE'
+      chat-permission: 'ymchat.color.rgb.champagne'
+      name-permission: 'ymchat.namecolor.rgb.champagne'
+    - id: cyanine
+      display: '&#1D38A8青花蓝'
+      value: '#1D38A8'
+      chat-permission: 'ymchat.color.rgb.cyanine'
+      name-permission: 'ymchat.namecolor.rgb.cyanine'
+    - id: crimson
+      display: '&#DC143C猩红色'
+      value: '#DC143C'
+      chat-permission: 'ymchat.color.rgb.crimson'
+      name-permission: 'ymchat.namecolor.rgb.crimson'

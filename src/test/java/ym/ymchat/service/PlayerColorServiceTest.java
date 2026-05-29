@@ -62,6 +62,36 @@ class PlayerColorServiceTest {
     }
 
     @Test
+    void resolvesGradientColorWithFirstGradientColorFallback() {
+        InMemoryRepository repository = new InMemoryRepository();
+        PlayerColorService service = new PlayerColorService(repository);
+        UUID playerId = UUID.randomUUID();
+        repository.save(playerId, PlayerColorPreference.rgb("sunset"));
+        FixedColorSettings settings = new FixedColorSettings(
+            true,
+            List.of(new ColorPreset(
+                "sunset",
+                "sunset",
+                "ymchat.color.rgb.sunset",
+                "",
+                List.of("#FF5555", "#FFFF55", "#55FF55")
+            ))
+        );
+
+        PlayerColorService.ResolvedColor resolved = service.resolve(
+            playerId,
+            permissionChecker("ymchat.color.rgb.sunset"),
+            ColorScope.CHAT,
+            settings,
+            "&f"
+        );
+
+        assertEquals(PlayerColorService.ColorSource.MANUAL_RGB, resolved.source());
+        assertEquals("&#FF5555", resolved.baseColorValue());
+        assertEquals(List.of("#FF5555", "#FFFF55", "#55FF55"), resolved.rgbColor().gradientColors());
+    }
+
+    @Test
     void manualOffFallsBackToRuleDefaultColor() {
         InMemoryRepository repository = new InMemoryRepository();
         PlayerColorService service = new PlayerColorService(repository);

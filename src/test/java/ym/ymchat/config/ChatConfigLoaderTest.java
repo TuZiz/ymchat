@@ -273,6 +273,7 @@ class ChatConfigLoaderTest {
             "id", "mint",
             "display", "&#55FFAAMint",
             "value", "#55FFAA",
+            "gradient", java.util.Map.of("colors", List.of("#55FFAA", "#33CCFF", "&d")),
             "chat-permission", "ymchat.color.rgb.mint",
             "name-permission", "ymchat.namecolor.rgb.mint"
         )));
@@ -283,6 +284,14 @@ class ChatConfigLoaderTest {
         assertEquals("#55FFAA", loaded.nameColorSettings().findRgbColor("mint").value());
         assertEquals("ymchat.color.rgb.mint", loaded.colorChatSettings().fixedSettings().findRgbColor("mint").permission());
         assertEquals("ymchat.namecolor.rgb.mint", loaded.nameColorSettings().findRgbColor("mint").permission());
+        assertEquals(
+            List.of("#55FFAA", "#33CCFF", "&d"),
+            loaded.colorChatSettings().fixedSettings().findRgbColor("mint").gradientColors()
+        );
+        assertEquals(
+            List.of("#55FFAA", "#33CCFF", "&d"),
+            loaded.nameColorSettings().findRgbColor("mint").gradientColors()
+        );
     }
 
     @Test

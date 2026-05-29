@@ -80,7 +80,10 @@ public final class PlayerColorService {
                 case RGB -> {
                     ColorPreset rgbColor = settings.findRgbColor(preference.value());
                     if (rgbColor != null && hasPermission(permissionChecker, rgbColor.permission())) {
-                        String color = firstValidColor(rgbColor.value(), fallbackColor);
+                        String color = firstValidColor(
+                            rgbColor.value(),
+                            firstNonBlank(ColorGradientUtil.firstGradientColor(rgbColor.gradientColors()), fallbackColor)
+                        );
                         return new ResolvedColor(color, ColorSource.MANUAL_RGB, preference, rgbColor);
                     }
                     return new ResolvedColor(fallbackColor, ColorSource.RULE_DEFAULT, preference, null);
@@ -218,6 +221,10 @@ public final class PlayerColorService {
         }
         String normalizedFallback = ColorCodeUtil.normalizeBaseColorValue(fallback);
         return normalizedFallback == null ? "&f" : normalizedFallback;
+    }
+
+    private String firstNonBlank(String first, String second) {
+        return first == null || first.isBlank() ? second : first;
     }
 
     private static final List<String> LEGACY_CODES = List.of(
