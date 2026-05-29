@@ -136,7 +136,7 @@ class LocalizationResourceTest {
 
     @Test
     void defaultResourcesUseCompactMainConfigFiles() {
-        List<String> expected = List.of("config.yml", "rules.yml", "highlights.yml");
+        List<String> expected = List.of("config.yml", "colors.yml", "rules.yml", "highlights.yml");
         List<String> missing = expected.stream()
             .filter(file -> !Files.exists(RESOURCES.resolve(file)))
             .toList();
@@ -145,6 +145,7 @@ class LocalizationResourceTest {
             "features.yml",
             "private-messages.yml",
             "color-chat.yml",
+            "name-color.yml",
             "item-showcase.yml",
             "mentions.yml",
             "anti-spam.yml",
@@ -243,6 +244,23 @@ class LocalizationResourceTest {
             "channels/world.yml must define Megaphone settings for the megaphone channel");
         assertTrue(world.getBoolean("Megaphone.Capture-World-Channel"),
             "channels/world.yml must keep world-channel megaphone capture enabled by default");
+    }
+
+    @Test
+    void defaultColorSettingsLiveInColorsFile() throws IOException {
+        YamlConfiguration config = load("config.yml");
+        YamlConfiguration colors = load("colors.yml");
+
+        assertTrue(!config.isConfigurationSection("Color-Chat"),
+            "config.yml must not keep Color-Chat; put color settings in colors.yml");
+        assertTrue(!config.isConfigurationSection("Name-Color"),
+            "config.yml must not keep Name-Color; put color settings in colors.yml");
+        assertTrue(colors.isConfigurationSection("Color-Chat"),
+            "colors.yml must define Color-Chat settings");
+        assertTrue(colors.isConfigurationSection("Name-Color"),
+            "colors.yml must define Name-Color settings");
+        assertTrue(!colors.getMapList("Colors.rgb-colors").isEmpty(),
+            "colors.yml must define shared RGB colors");
     }
 
     @Test

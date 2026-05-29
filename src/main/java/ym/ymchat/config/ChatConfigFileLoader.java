@@ -34,8 +34,9 @@ public final class ChatConfigFileLoader {
         DEFAULT_FILES.put("Channels", "channels");
         DEFAULT_FILES.put("Formats", "config.yml");
         DEFAULT_FILES.put("Private-Messages", "config.yml");
-        DEFAULT_FILES.put("Color-Chat", "config.yml");
-        DEFAULT_FILES.put("Name-Color", "config.yml");
+        DEFAULT_FILES.put("Colors", "colors.yml");
+        DEFAULT_FILES.put("Color-Chat", "colors.yml");
+        DEFAULT_FILES.put("Name-Color", "colors.yml");
         DEFAULT_FILES.put("Highlights", "highlights.yml");
         DEFAULT_FILES.put("Item-Showcase", "config.yml");
         DEFAULT_FILES.put("Megaphone", "channels");
@@ -135,6 +136,9 @@ public final class ChatConfigFileLoader {
         copyRootWithoutFiles(rootConfig, merged);
         for (String sectionName : DEFAULT_FILES.keySet()) {
             FileConfiguration splitConfig = splitConfigs == null ? null : splitConfigs.get(sectionName);
+            if (splitConfig == null && ("Color-Chat".equals(sectionName) || "Name-Color".equals(sectionName))) {
+                splitConfig = splitConfigs == null ? null : splitConfigs.get("Colors");
+            }
             if (splitConfig != null) {
                 copySplitSection(sectionName, splitConfig, merged);
             }
@@ -148,6 +152,11 @@ public final class ChatConfigFileLoader {
 
     private String configuredSplitPath(FileConfiguration rootConfig, String sectionName, String defaultPath) {
         if (rootConfig.isConfigurationSection("Files")) {
+            if (("Color-Chat".equals(sectionName) || "Name-Color".equals(sectionName))
+                && !rootConfig.contains("Files." + sectionName)
+                && rootConfig.contains("Files.Colors")) {
+                return rootConfig.getString("Files.Colors", defaultPath);
+            }
             return rootConfig.getString("Files." + sectionName, defaultPath);
         }
         return defaultPath;

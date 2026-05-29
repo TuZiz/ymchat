@@ -43,6 +43,8 @@ class ChatConfigFileLoaderTest {
         assertEquals("default", loadedConfig.formats().getFirst().id());
         assertTrue(loadedConfig.privateMessageSettings().enabled());
         assertTrue(loadedConfig.itemShowcaseSettings().enabled());
+        assertEquals("ymchat.color.rgb.pink", loadedConfig.colorChatSettings().fixedSettings().findRgbColor("pink").permission());
+        assertEquals("ymchat.namecolor.rgb.pink", loadedConfig.nameColorSettings().findRgbColor("pink").permission());
         assertEquals(1, loadedConfig.megaphoneSettings().mode(ym.ymchat.config.megaphone.MegaphoneMode.CHAT).cost());
         assertTrue(warnings.isEmpty(), warnings::toString);
     }
@@ -116,7 +118,46 @@ class ChatConfigFileLoaderTest {
         assertEquals("staff", loaded.getMapList("Channels.List").get(3).get("id"));
         assertEquals("megaphones.yml", loaded.getString("Megaphone.Data-File"));
         assertEquals("&#FFFFFF: &#E0E0E0{message}", loadedConfig.formats().getFirst().messageVariants().get(3).text());
+        assertEquals("#FF55FF", loadedConfig.colorChatSettings().fixedSettings().findRgbColor("pink").value());
+        assertEquals("#FF55FF", loadedConfig.nameColorSettings().findRgbColor("pink").value());
         assertTrue(warnings.isEmpty(), warnings::toString);
+    }
+
+    @Test
+    void filesColorsPathFeedsChatNameAndSharedColorSections() throws Exception {
+        YamlConfiguration root = yaml("""
+            Options:
+              Language: en_us
+            Files:
+              Colors: 'custom-colors.yml'
+            """);
+        Files.writeString(tempDir.resolve("custom-colors.yml"), """
+            Color-Chat:
+              Inline:
+                legacy-permission: 'custom.chat.inline.legacy'
+              Fixed:
+                enabled: true
+            Name-Color:
+              Fixed:
+                enabled: true
+            Colors:
+              rgb-colors:
+                - id: mint
+                  display: '&aMint'
+                  value: '#55FFAA'
+                  chat-permission: 'custom.chat.mint'
+                  name-permission: 'custom.name.mint'
+            """, StandardCharsets.UTF_8);
+        List<String> warnings = new ArrayList<>();
+
+        FileConfiguration loaded = new ChatConfigFileLoader(tempDir.toFile(), this::resource, warnings::add).load(root);
+        ChatPluginConfig loadedConfig = new ChatConfigLoader().load(loaded);
+
+        assertEquals("custom.chat.inline.legacy", loadedConfig.colorChatSettings().inlineSettings().legacyPermission());
+        assertEquals("custom.chat.mint", loadedConfig.colorChatSettings().fixedSettings().findRgbColor("mint").permission());
+        assertEquals("custom.name.mint", loadedConfig.nameColorSettings().findRgbColor("mint").permission());
+        assertEquals("#55FFAA", loadedConfig.nameColorSettings().findRgbColor("mint").value());
+        assertTrue(warnings.stream().noneMatch(message -> message.contains("custom-colors.yml")), warnings::toString);
     }
 
     @Test
@@ -190,6 +231,7 @@ class ChatConfigFileLoaderTest {
               Target: ALL
             Files:
               Channels: 'config/channels.yml'
+              Colors: 'config/colors.yml'
               Formats: 'config/formats.yml'
               Private-Messages: 'config/private-messages.yml'
               Highlights: 'config/highlights.yml'
@@ -208,6 +250,21 @@ class ChatConfigFileLoaderTest {
                       target: ALL
                       format: default
                       cross-server: true
+                """),
+            "Colors", yaml("""
+                Color-Chat:
+                  Fixed:
+                    enabled: true
+                Name-Color:
+                  Fixed:
+                    enabled: true
+                Colors:
+                  rgb-colors:
+                    - id: mint
+                      display: '&aMint'
+                      value: '#55FFAA'
+                      chat-permission: 'merged.chat.mint'
+                      name-permission: 'merged.name.mint'
                 """),
             "Formats", yaml("""
                 Formats:
@@ -278,6 +335,8 @@ class ChatConfigFileLoaderTest {
         assertEquals("buy", loaded.publicChatHighlightSettings().keywordRules().getFirst().id());
         assertEquals("show [i]", loaded.itemShowcaseSettings().commandMessage());
         assertEquals("&eITEM", loaded.itemShowcaseSettings().itemText());
+        assertEquals("merged.chat.mint", loaded.colorChatSettings().fixedSettings().findRgbColor("mint").permission());
+        assertEquals("merged.name.mint", loaded.nameColorSettings().findRgbColor("mint").permission());
     }
 
     @Test
