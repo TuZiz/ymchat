@@ -14,6 +14,7 @@ import ym.ymchat.YmChatPlugin;
 import ym.ymchat.config.chat.ChatChannel;
 import ym.ymchat.config.color.ColorPreset;
 import ym.ymchat.config.color.FixedColorSettings;
+import ym.ymchat.service.color.ColorScope;
 import ym.ymchat.service.color.PlayerColorPreference;
 import ym.ymchat.service.color.PlayerColorService;
 
@@ -26,6 +27,7 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
     private static final String CHANNEL_ZH = "\u9891\u9053";
     private static final String DEBUG_ZH_NAME = "\u8c03\u8bd5";
     private static final String COLOR_ZH = "\u989c\u8272";
+    private static final String NAME_COLOR_ZH = "\u540d\u5b57\u989c\u8272";
     private static final String MEGAPHONE_ZH = "\u5587\u53ed";
     private static final String LOGS_ZH = "\u65e5\u5fd7";
 
@@ -37,6 +39,7 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
         "channel",
         "debug",
         "color",
+        "namecolor",
         "megaphone",
         "logs"
     );
@@ -81,6 +84,9 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
         }
         if (matches(sub, "color", COLOR_ZH)) {
             return handleColor(sender, args);
+        }
+        if (matches(sub, "namecolor", NAME_COLOR_ZH)) {
+            return handleNameColor(sender, args);
         }
         if (matches(sub, "megaphone", MEGAPHONE_ZH, "\u5927\u5587\u53ed", "\u558a\u8bdd")) {
             return handleMegaphone(sender, args);
@@ -130,16 +136,19 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
         CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.force-legacy", "value", state(plugin.getChatConfig().forceLegacy()));
         CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.global-debug", "value", state(plugin.getChatConfig().debug()));
         CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.language", "value", plugin.getLanguageService().activeLocale());
+        CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.channel-switch", "value", describeChannelSwitch());
+        CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.cross-server-sync", "value", describeCrossServerSync());
         if (sender instanceof Player player) {
             ChatChannel channel = plugin.getChannelService().resolveChannel(player);
             PlayerColorService.ResolvedColor resolved = resolveColor(player, channel);
             CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.participating", "value", state(plugin.isParticipating(player)));
             CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.channel", "value", plugin.getChannelService().describeChannel(channel));
+            CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.channel-cross-server", "value", state(channel.crossServer()));
             CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.reply-target", "value", plugin.getPrivateMessageService().describeReplyTarget(player));
             CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.personal-debug", "value", state(plugin.getDebugService().isDebugEnabled(player)));
             CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.socialspy", "value", state(plugin.getPrivateMessageService().isSocialSpyEnabled(player)));
-            CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.chat-color", "value", describeCurrentColor(resolved));
-            CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.saved-mode", "value", describeStoredMode(resolved.preference()));
+            CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.chat-color", "value", describeCurrentColor(resolved, "commands.ymchat.color"));
+            CommandMessages.sendKey(plugin, sender, "commands.ymchat.status.saved-mode", "value", describeStoredMode(resolved.preference(), "commands.ymchat.color"));
         }
         return true;
     }
@@ -187,56 +196,84 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean handleColor(CommandSender sender, String[] args) {
+        return handleColor(
+            sender,
+            args,
+            ColorScope.CHAT,
+            plugin.getChatConfig().colorChatSettings().fixedSettings(),
+            "commands.ymchat.color",
+            "&f"
+        );
+    }
+
+    private boolean handleNameColor(CommandSender sender, String[] args) {
+        return handleColor(
+            sender,
+            args,
+            ColorScope.NAME,
+            plugin.getChatConfig().nameColorSettings(),
+            "commands.ymchat.namecolor",
+            "&f"
+        );
+    }
+
+    private boolean handleColor(
+        CommandSender sender,
+        String[] args,
+        ColorScope scope,
+        FixedColorSettings fixedSettings,
+        String messageRoot,
+        String defaultColor
+    ) {
         if (!(sender instanceof Player player)) {
-            CommandMessages.sendKey(plugin, sender, "commands.ymchat.color.only-player");
+            CommandMessages.sendKey(plugin, sender, messageRoot + ".only-player");
             return true;
         }
 
-        FixedColorSettings fixedSettings = plugin.getChatConfig().colorChatSettings().fixedSettings();
         if (fixedSettings == null || !fixedSettings.enabled()) {
-            CommandMessages.sendKey(plugin, sender, "commands.ymchat.color.fixed-disabled");
+            CommandMessages.sendKey(plugin, sender, messageRoot + ".fixed-disabled");
             return true;
         }
-        if (!plugin.getPlayerColorService().canUseCommands(player, plugin.getChatConfig().colorChatSettings())) {
-            CommandMessages.sendKey(plugin, sender, "commands.ymchat.color.no-permission");
+        if (!plugin.getPlayerColorService().canUseCommands(player, scope, fixedSettings)) {
+            CommandMessages.sendKey(plugin, sender, messageRoot + ".no-permission");
             return true;
         }
 
         if (args.length == 1) {
-            CommandMessages.sendKey(plugin, player, "commands.ymchat.color.usage");
-            sendColorOverview(player);
+            CommandMessages.sendKey(plugin, player, messageRoot + ".usage");
+            sendColorOverview(player, scope, fixedSettings, messageRoot, defaultColor);
             return true;
         }
 
         String action = normalize(args[1]);
         if (matches(action, "gui", "\u83dc\u5355")) {
-            CommandMessages.sendKey(plugin, player, "commands.ymchat.color.menu-removed");
-            CommandMessages.sendKey(plugin, player, "commands.ymchat.color.usage");
-            sendColorOverview(player);
+            CommandMessages.sendKey(plugin, player, messageRoot + ".menu-removed");
+            CommandMessages.sendKey(plugin, player, messageRoot + ".usage");
+            sendColorOverview(player, scope, fixedSettings, messageRoot, defaultColor);
             return true;
         }
 
         if (matches(action, "off", "\u5173\u95ed", "\u5173")) {
-            plugin.getPlayerColorService().setOff(player);
-            CommandMessages.sendKey(plugin, player, "commands.ymchat.color.off");
+            plugin.getPlayerColorService().setOff(player, scope);
+            CommandMessages.sendKey(plugin, player, messageRoot + ".off");
             return true;
         }
         if (matches(action, "reset", "\u91cd\u7f6e", "\u6e05\u9664")) {
-            plugin.getPlayerColorService().reset(player);
-            CommandMessages.sendKey(plugin, player, "commands.ymchat.color.reset");
+            plugin.getPlayerColorService().reset(player, scope);
+            CommandMessages.sendKey(plugin, player, messageRoot + ".reset");
             return true;
         }
 
         String legacyCode = PlayerColorService.normalizeLegacyCode(action);
         if (legacyCode != null) {
-            if (!plugin.getPlayerColorService().setLegacy(player, plugin.getChatConfig().colorChatSettings(), legacyCode)) {
-                CommandMessages.sendKey(plugin, player, "commands.ymchat.color.no-permission-legacy", "color", legacyCode);
+            if (!plugin.getPlayerColorService().setLegacy(player, scope, fixedSettings, legacyCode)) {
+                CommandMessages.sendKey(plugin, player, messageRoot + ".no-permission-legacy", "color", legacyCode);
                 return true;
             }
             CommandMessages.sendKey(
                 plugin,
                 player,
-                "commands.ymchat.color.switched-legacy",
+                messageRoot + ".switched-legacy",
                 "color", legacyColorDisplay(legacyCode)
             );
             return true;
@@ -244,14 +281,14 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
 
         ColorPreset rgbColor = fixedSettings.findRgbColor(action);
         if (rgbColor == null) {
-            CommandMessages.sendKey(plugin, player, "commands.ymchat.color.unknown", "color", action);
+            CommandMessages.sendKey(plugin, player, messageRoot + ".unknown", "color", action);
             return true;
         }
-        if (!plugin.getPlayerColorService().setRgb(player, plugin.getChatConfig().colorChatSettings(), action)) {
-            CommandMessages.sendKey(plugin, player, "commands.ymchat.color.no-permission-rgb", "color", action);
+        if (!plugin.getPlayerColorService().setRgb(player, scope, fixedSettings, action)) {
+            CommandMessages.sendKey(plugin, player, messageRoot + ".no-permission-rgb", "color", action);
             return true;
         }
-        CommandMessages.sendKey(plugin, player, "commands.ymchat.color.switched-rgb", "color", rgbColor.display());
+        CommandMessages.sendKey(plugin, player, messageRoot + ".switched-rgb", "color", rgbColor.display());
         return true;
     }
 
@@ -278,17 +315,22 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private void sendColorOverview(Player player) {
-        ChatChannel channel = plugin.getChannelService().resolveChannel(player);
-        PlayerColorService.ResolvedColor resolved = resolveColor(player, channel);
-        List<String> legacyCodes = plugin.getPlayerColorService().availableLegacyCodes(player, plugin.getChatConfig().colorChatSettings());
-        List<ColorPreset> rgbColors = plugin.getPlayerColorService().availableRgbColors(player, plugin.getChatConfig().colorChatSettings());
-        CommandMessages.sendKey(plugin, player, "commands.ymchat.color.overview.active", "value", describeCurrentColor(resolved));
-        CommandMessages.sendKey(plugin, player, "commands.ymchat.color.overview.saved-mode", "value", describeStoredMode(resolved.preference()));
+    private void sendColorOverview(
+        Player player,
+        ColorScope scope,
+        FixedColorSettings fixedSettings,
+        String messageRoot,
+        String defaultColor
+    ) {
+        PlayerColorService.ResolvedColor resolved = resolveColor(player, scope, defaultColor);
+        List<String> legacyCodes = plugin.getPlayerColorService().availableLegacyCodes(player, scope, fixedSettings);
+        List<ColorPreset> rgbColors = plugin.getPlayerColorService().availableRgbColors(player, scope, fixedSettings);
+        CommandMessages.sendKey(plugin, player, messageRoot + ".overview.active", "value", describeCurrentColor(resolved, messageRoot));
+        CommandMessages.sendKey(plugin, player, messageRoot + ".overview.saved-mode", "value", describeStoredMode(resolved.preference(), messageRoot));
         CommandMessages.sendKey(
             plugin,
             player,
-            "commands.ymchat.color.overview.legacy-colors",
+            messageRoot + ".overview.legacy-colors",
             "value", legacyCodes.isEmpty()
                 ? plugin.getLanguageService().get("common.none")
                 : String.join("&#AAAAAA, ", legacyCodes.stream().map(this::legacyColorDisplay).toList())
@@ -297,13 +339,30 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
             CommandMessages.sendKey(
                 plugin,
                 player,
-                "commands.ymchat.color.overview.rgb-colors",
+                messageRoot + ".overview.rgb-colors",
                 "value", String.join("&#AAAAAA, &#FFFFFF", rgbColors.stream().map(ColorPreset::id).toList())
             );
         }
     }
 
     private PlayerColorService.ResolvedColor resolveColor(Player player, ChatChannel channel) {
+        return resolveColor(
+            player,
+            ColorScope.CHAT,
+            plugin.getChatConfig().firstMatching(player, channel.id(), channel.format()).messageOptions().defaultColor()
+        );
+    }
+
+    private PlayerColorService.ResolvedColor resolveColor(Player player, ColorScope scope, String defaultColor) {
+        if (scope == ColorScope.NAME) {
+            return plugin.getPlayerColorService().resolve(
+                player,
+                ColorScope.NAME,
+                plugin.getChatConfig().nameColorSettings(),
+                defaultColor
+            );
+        }
+        ChatChannel channel = plugin.getChannelService().resolveChannel(player);
         return plugin.getPlayerColorService().resolve(
             player,
             plugin.getChatConfig().colorChatSettings(),
@@ -311,18 +370,18 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
         );
     }
 
-    private String describeCurrentColor(PlayerColorService.ResolvedColor resolved) {
+    private String describeCurrentColor(PlayerColorService.ResolvedColor resolved, String messageRoot) {
         return switch (resolved.source()) {
             case MANUAL_LEGACY -> plugin.getLanguageService().get(
-                "commands.ymchat.color.current.manual-legacy",
+                messageRoot + ".current.manual-legacy",
                 "value", legacyColorDisplay(resolved.preference().value())
             );
             case MANUAL_RGB -> plugin.getLanguageService().get(
-                "commands.ymchat.color.current.manual-rgb",
+                messageRoot + ".current.manual-rgb",
                 "value", resolved.rgbColor() == null ? resolved.baseColorValue() : resolved.rgbColor().display()
             );
-            case MANUAL_OFF -> plugin.getLanguageService().get("commands.ymchat.color.current.manual-off");
-            case RULE_DEFAULT -> plugin.getLanguageService().get("commands.ymchat.color.current.rule-default");
+            case MANUAL_OFF -> plugin.getLanguageService().get(messageRoot + ".current.manual-off");
+            case RULE_DEFAULT -> plugin.getLanguageService().get(messageRoot + ".current.rule-default");
         };
     }
 
@@ -331,20 +390,41 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
         return "&" + normalized + normalized.toUpperCase(Locale.ROOT) + "&r";
     }
 
-    private String describeStoredMode(PlayerColorPreference preference) {
+    private String describeStoredMode(PlayerColorPreference preference, String messageRoot) {
         if (preference == null) {
-            return plugin.getLanguageService().get("commands.ymchat.color.mode.none");
+            return plugin.getLanguageService().get(messageRoot + ".mode.none");
         }
         return switch (preference.mode()) {
-            case LEGACY -> plugin.getLanguageService().get("commands.ymchat.color.mode.legacy", "value", preference.value());
-            case PRESET -> plugin.getLanguageService().get("commands.ymchat.color.mode.preset", "value", preference.value());
-            case RGB -> plugin.getLanguageService().get("commands.ymchat.color.mode.rgb", "value", preference.value());
-            case OFF -> plugin.getLanguageService().get("commands.ymchat.color.mode.off");
+            case LEGACY -> plugin.getLanguageService().get(messageRoot + ".mode.legacy", "value", preference.value());
+            case PRESET -> plugin.getLanguageService().get(messageRoot + ".mode.preset", "value", preference.value());
+            case RGB -> plugin.getLanguageService().get(messageRoot + ".mode.rgb", "value", preference.value());
+            case OFF -> plugin.getLanguageService().get(messageRoot + ".mode.off");
         };
     }
 
     private String state(boolean enabled) {
         return plugin.getLanguageService().get(enabled ? "common.state.enabled" : "common.state.disabled");
+    }
+
+    private String describeChannelSwitch() {
+        if (plugin.getChatConfig().channelSwitchSettings().enabled()) {
+            return state(true);
+        }
+        return plugin.getLanguageService().get(
+            "commands.ymchat.status.channel-switch-admin-only",
+            "permission", plugin.getChatConfig().channelSwitchSettings().adminPermission()
+        );
+    }
+
+    private String describeCrossServerSync() {
+        String status = plugin.getCrossServerChatService().describeStatus();
+        if ("disabled".equalsIgnoreCase(status)) {
+            return plugin.getLanguageService().get("commands.ymchat.status.cross-server-disabled");
+        }
+        if ("misconfigured".equalsIgnoreCase(status)) {
+            return plugin.getLanguageService().get("commands.ymchat.status.cross-server-misconfigured");
+        }
+        return plugin.getLanguageService().get("commands.ymchat.status.cross-server-enabled", "value", status);
     }
 
     private void sendHelp(CommandSender sender) {
@@ -364,10 +444,26 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
         if (args.length == 2 && matches(normalize(args[0]), "debug", DEBUG_ZH_NAME)) {
             return filter(DEBUG_ACTIONS_LEGACY, args[1]);
         }
-        if (args.length == 2 && matches(normalize(args[0]), "color", COLOR_ZH) && sender instanceof Player player) {
+        if (args.length == 2
+            && matches(normalize(args[0]), "color", COLOR_ZH)
+            && sender instanceof Player player
+            && plugin != null) {
             LinkedHashSet<String> values = new LinkedHashSet<>(COLOR_ACTIONS_LEGACY);
             values.addAll(plugin.getPlayerColorService().availableLegacyCodes(player, plugin.getChatConfig().colorChatSettings()));
             values.addAll(plugin.getPlayerColorService().availableRgbColors(player, plugin.getChatConfig().colorChatSettings())
+                .stream()
+                .map(ColorPreset::id)
+                .toList());
+            return filter(values, args[1]);
+        }
+        if (args.length == 2
+            && matches(normalize(args[0]), "namecolor", NAME_COLOR_ZH)
+            && sender instanceof Player player
+            && plugin != null) {
+            LinkedHashSet<String> values = new LinkedHashSet<>(COLOR_ACTIONS_LEGACY);
+            FixedColorSettings fixedSettings = plugin.getChatConfig().nameColorSettings();
+            values.addAll(plugin.getPlayerColorService().availableLegacyCodes(player, ColorScope.NAME, fixedSettings));
+            values.addAll(plugin.getPlayerColorService().availableRgbColors(player, ColorScope.NAME, fixedSettings)
                 .stream()
                 .map(ColorPreset::id)
                 .toList());

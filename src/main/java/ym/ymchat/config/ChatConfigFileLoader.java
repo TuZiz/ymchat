@@ -22,25 +22,34 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class ChatConfigFileLoader {
 
     private static final Map<String, String> DEFAULT_FILES = new LinkedHashMap<>();
+    private static final Map<String, String> LEGACY_DEFAULT_FILES = new LinkedHashMap<>();
     private static final List<String> DEFAULT_CHANNEL_RESOURCES = List.of(
-        "channels/settings.yml",
         "channels/global.yml",
+        "channels/cross-server.yml",
         "channels/world.yml",
         "channels/staff.yml"
     );
 
     static {
         DEFAULT_FILES.put("Channels", "channels");
-        DEFAULT_FILES.put("Formats", "formats.yml");
-        DEFAULT_FILES.put("Private-Messages", "features.yml");
+        DEFAULT_FILES.put("Formats", "config.yml");
+        DEFAULT_FILES.put("Private-Messages", "config.yml");
         DEFAULT_FILES.put("Color-Chat", "config.yml");
-        DEFAULT_FILES.put("Highlights", "rules.yml");
-        DEFAULT_FILES.put("Item-Showcase", "features.yml");
-        DEFAULT_FILES.put("Megaphone", "features.yml");
+        DEFAULT_FILES.put("Name-Color", "config.yml");
+        DEFAULT_FILES.put("Highlights", "highlights.yml");
+        DEFAULT_FILES.put("Item-Showcase", "config.yml");
+        DEFAULT_FILES.put("Megaphone", "channels");
         DEFAULT_FILES.put("Mentions", "config.yml");
         DEFAULT_FILES.put("Anti-Spam", "rules.yml");
         DEFAULT_FILES.put("Filter", "rules.yml");
-        DEFAULT_FILES.put("Cross-Server", "config.yml");
+        DEFAULT_FILES.put("Cross-Server", "channels");
+
+        LEGACY_DEFAULT_FILES.put("Channels", "channels");
+        LEGACY_DEFAULT_FILES.put("Formats", "formats.yml");
+        LEGACY_DEFAULT_FILES.put("Private-Messages", "features.yml");
+        LEGACY_DEFAULT_FILES.put("Highlights", "rules.yml");
+        LEGACY_DEFAULT_FILES.put("Item-Showcase", "features.yml");
+        LEGACY_DEFAULT_FILES.put("Megaphone", "features.yml");
     }
 
     private final File dataFolder;
@@ -64,7 +73,7 @@ public final class ChatConfigFileLoader {
     }
 
     public FileConfiguration load(FileConfiguration rootConfig) {
-        if (rootConfig == null || !rootConfig.isConfigurationSection("Files")) {
+        if (rootConfig == null) {
             return rootConfig;
         }
 
@@ -78,15 +87,38 @@ public final class ChatConfigFileLoader {
         for (Map.Entry<String, String> entry : DEFAULT_FILES.entrySet()) {
             String sectionName = entry.getKey();
             String defaultPath = entry.getValue();
-            String configuredPath = rootConfig.getString("Files." + sectionName, defaultPath);
+            String configuredPath = configuredSplitPath(rootConfig, sectionName, defaultPath);
             File file = resolveDataFile(configuredPath);
+            boolean copied = false;
+            boolean primaryRootConfig = !rootConfig.isConfigurationSection("Files") && "config.yml".equals(defaultPath);
             if ("Channels".equals(sectionName) && file.isDirectory()) {
                 copyChannelsDirectory(file, merged);
+                copyBundledOrRootChannelSettings(rootConfig, bundledDefault, merged);
+                copied = true;
             } else if (file.isFile()) {
                 YamlConfiguration child = loadYaml(file);
-                copySplitSection(sectionName, child, merged);
-            } else if (!merged.contains(sectionName)) {
-                warnMissingSplitFile(configuredPath, sectionName);
+                if (shouldPreferLegacyHighlights(sectionName, defaultPath, rootConfig, child)) {
+                    copied = copyLegacyDefaultSection(sectionName, merged);
+                }
+                if (!copied) {
+                    copied = copySplitSection(sectionName, child, merged, primaryRootConfig);
+                }
+            }
+            if (!copied && !rootConfig.isConfigurationSection("Files") && !merged.contains(sectionName)) {
+                copied = copyLegacyDefaultSection(sectionName, merged);
+            }
+            if (!copied
+                && "Channels".equals(sectionName)
+                && !rootConfig.isConfigurationSection("Files")
+                && merged.getMapList("Channels.List").isEmpty()) {
+                copyBundledDefaultChannels(merged);
+                copyBundledOrRootChannelSettings(rootConfig, bundledDefault, merged);
+                copied = merged.contains("Channels");
+            }
+            if (!copied && !merged.contains(sectionName)) {
+                if (rootConfig.isConfigurationSection("Files")) {
+                    warnMissingSplitFile(configuredPath, sectionName);
+                }
                 copyBundledDefaultSection(sectionName, defaultPath, bundledDefault, merged);
             }
         }
@@ -114,6 +146,13 @@ public final class ChatConfigFileLoader {
         return DEFAULT_FILES;
     }
 
+    private String configuredSplitPath(FileConfiguration rootConfig, String sectionName, String defaultPath) {
+        if (rootConfig.isConfigurationSection("Files")) {
+            return rootConfig.getString("Files." + sectionName, defaultPath);
+        }
+        return defaultPath;
+    }
+
     private void copyRootWithoutFiles(FileConfiguration rootConfig, YamlConfiguration merged) {
         for (String key : rootConfig.getKeys(false)) {
             if ("Files".equalsIgnoreCase(key)) {
@@ -123,18 +162,49 @@ public final class ChatConfigFileLoader {
         }
     }
 
+    private void copyBundledOrRootChannelSettings(
+        FileConfiguration rootConfig,
+        FileConfiguration bundledDefault,
+        YamlConfiguration merged
+    ) {
+        ConfigurationSection rootChannels = rootConfig == null ? null : rootConfig.getConfigurationSection("Channels");
+        if (rootChannels != null) {
+            copySectionValue(rootChannels, merged.getConfigurationSection("Channels"), "Show-Display");
+            copySectionValue(rootChannels, merged.getConfigurationSection("Channels"), "Default");
+            return;
+        }
+        ConfigurationSection bundledChannels = bundledDefault == null ? null : bundledDefault.getConfigurationSection("Channels");
+        if (bundledChannels != null) {
+            copySectionValue(bundledChannels, merged.getConfigurationSection("Channels"), "Show-Display");
+            copySectionValue(bundledChannels, merged.getConfigurationSection("Channels"), "Default");
+        }
+    }
+
     private void copySplitSection(String sectionName, FileConfiguration child, YamlConfiguration merged) {
+        copySplitSection(sectionName, child, merged, false);
+    }
+
+    private boolean copySplitSection(
+        String sectionName,
+        FileConfiguration child,
+        YamlConfiguration merged,
+        boolean requireNamedSection
+    ) {
         Object rootValue = child.get(sectionName);
         if (rootValue != null && !(rootValue instanceof ConfigurationSection)) {
             merged.set(sectionName, rootValue);
-            return;
+            return true;
         }
         ConfigurationSection section = child.getConfigurationSection(sectionName);
+        if (section == null && requireNamedSection) {
+            return false;
+        }
         if (section == null) {
             section = child;
         }
         merged.set(sectionName, null);
         copySection(section, merged.createSection(sectionName));
+        return true;
     }
 
     private void copyBundledDefaultSection(
@@ -143,15 +213,33 @@ public final class ChatConfigFileLoader {
         FileConfiguration bundledDefault,
         YamlConfiguration merged
     ) {
-        if ("Channels".equals(sectionName)) {
-            copyBundledDefaultChannels(merged);
-            if (merged.contains("Channels")) {
+        if ("Cross-Server".equals(sectionName) && "channels".equals(defaultPath)) {
+            copyBundledDefaultCrossServer(merged);
+            if (merged.contains("Cross-Server")) {
                 return;
             }
-        } else {
-            YamlConfiguration bundledSplit = loadBundledYaml(defaultPath);
+        }
+        if ("Megaphone".equals(sectionName) && "channels".equals(defaultPath)) {
+            copyBundledDefaultMegaphone(merged);
+            if (merged.contains("Megaphone")) {
+                return;
+            }
+        }
+        YamlConfiguration bundledSplit = loadBundledYaml(defaultPath);
+        if (bundledSplit.contains(sectionName)) {
+            copySplitSection(sectionName, bundledSplit, merged, true);
+            return;
+        }
+        if (!"config.yml".equals(defaultPath)) {
             if (!bundledSplit.getKeys(false).isEmpty()) {
                 copySplitSection(sectionName, bundledSplit, merged);
+                return;
+            }
+        }
+        if ("Channels".equals(sectionName)) {
+            copyBundledDefaultChannels(merged);
+            copyBundledOrRootChannelSettings(null, bundledDefault, merged);
+            if (merged.contains("Channels")) {
                 return;
             }
         }
@@ -170,6 +258,75 @@ public final class ChatConfigFileLoader {
         copySection(section, merged.createSection(sectionName));
     }
 
+    private void copyBundledDefaultCrossServer(YamlConfiguration merged) {
+        for (String resourcePath : DEFAULT_CHANNEL_RESOURCES) {
+            ConfigurationSection crossServer = loadBundledYaml(resourcePath).getConfigurationSection("Cross-Server");
+            if (crossServer == null) {
+                continue;
+            }
+            merged.set("Cross-Server", null);
+            copySection(crossServer, merged.createSection("Cross-Server"));
+            return;
+        }
+    }
+
+    private void copyBundledDefaultMegaphone(YamlConfiguration merged) {
+        for (String resourcePath : DEFAULT_CHANNEL_RESOURCES) {
+            ConfigurationSection megaphone = loadBundledYaml(resourcePath).getConfigurationSection("Megaphone");
+            if (megaphone == null) {
+                continue;
+            }
+            merged.set("Megaphone", null);
+            copySection(megaphone, merged.createSection("Megaphone"));
+            return;
+        }
+    }
+
+    private boolean copyLegacyDefaultSection(String sectionName, YamlConfiguration merged) {
+        String legacyPath = LEGACY_DEFAULT_FILES.get(sectionName);
+        if (legacyPath == null || legacyPath.isBlank()) {
+            return false;
+        }
+        File file = resolveDataFile(legacyPath);
+        if ("Channels".equals(sectionName) && file.isDirectory()) {
+            copyChannelsDirectory(file, merged);
+            return merged.contains(sectionName);
+        }
+        if (!file.isFile()) {
+            return false;
+        }
+        YamlConfiguration legacy = loadYaml(file);
+        if ("Highlights".equals(sectionName)) {
+            return legacy.contains(sectionName) && copySplitSection(sectionName, legacy, merged, true);
+        }
+        return copySplitSection(sectionName, legacy, merged, false);
+    }
+
+    private boolean shouldPreferLegacyHighlights(
+        String sectionName,
+        String defaultPath,
+        FileConfiguration rootConfig,
+        YamlConfiguration highlights
+    ) {
+        if (!"Highlights".equals(sectionName)
+            || !"highlights.yml".equals(defaultPath)
+            || rootConfig.isConfigurationSection("Files")
+            || !matchesBundledSection(highlights, "highlights.yml", sectionName)) {
+            return false;
+        }
+        File legacyRules = resolveDataFile("rules.yml");
+        return legacyRules.isFile() && loadYaml(legacyRules).contains(sectionName);
+    }
+
+    private boolean matchesBundledSection(FileConfiguration current, String bundledPath, String sectionName) {
+        if (current == null) {
+            return false;
+        }
+        Object currentValue = sectionToValue(current.get(sectionName));
+        Object bundledValue = sectionToValue(loadBundledYaml(bundledPath).get(sectionName));
+        return currentValue == null ? bundledValue == null : currentValue.equals(bundledValue);
+    }
+
     private void copyChannelsDirectory(File directory, YamlConfiguration merged) {
         List<File> files = channelFiles(directory);
         if (files.isEmpty()) {
@@ -185,8 +342,7 @@ public final class ChatConfigFileLoader {
             appendChannelFile(child, channels, list);
         }
         channels.set("List", list);
-        merged.set("Channels", null);
-        copySection(channels, merged.createSection("Channels"));
+        copyChannelBundle(channels, merged);
     }
 
     private void copyBundledDefaultChannels(YamlConfiguration merged) {
@@ -199,8 +355,31 @@ public final class ChatConfigFileLoader {
             return;
         }
         channels.set("List", list);
+        copyChannelBundle(channels, merged);
+    }
+
+    private void copyChannelBundle(YamlConfiguration channels, YamlConfiguration merged) {
         merged.set("Channels", null);
-        copySection(channels, merged.createSection("Channels"));
+        ConfigurationSection targetChannels = merged.createSection("Channels");
+        for (String key : channels.getKeys(false)) {
+            if ("Cross-Server".equalsIgnoreCase(key)) {
+                ConfigurationSection crossServer = channels.getConfigurationSection(key);
+                if (crossServer != null) {
+                    merged.set("Cross-Server", null);
+                    copySection(crossServer, merged.createSection("Cross-Server"));
+                }
+                continue;
+            }
+            if ("Megaphone".equalsIgnoreCase(key)) {
+                ConfigurationSection megaphone = channels.getConfigurationSection(key);
+                if (megaphone != null && !merged.contains("Megaphone")) {
+                    merged.set("Megaphone", null);
+                    copySection(megaphone, merged.createSection("Megaphone"));
+                }
+                continue;
+            }
+            copyValue(channels, targetChannels, key);
+        }
     }
 
     private void appendChannelFile(YamlConfiguration source, YamlConfiguration channels, List<Object> list) {
@@ -223,13 +402,92 @@ public final class ChatConfigFileLoader {
         if (source.contains("id")) {
             Map<String, Object> channel = new LinkedHashMap<>();
             for (String key : source.getKeys(false)) {
-                if ("Show-Display".equalsIgnoreCase(key) || "Default".equalsIgnoreCase(key)) {
+                if ("Show-Display".equalsIgnoreCase(key)
+                    || "Default".equalsIgnoreCase(key)
+                    || "Format".equalsIgnoreCase(key)
+                    || "Cross-Server".equalsIgnoreCase(key)
+                    || "Megaphone".equalsIgnoreCase(key)) {
                     continue;
                 }
                 channel.put(key, source.get(key));
             }
+            appendCrossServerSettings(source, channels);
+            appendMegaphoneSettings(source, channels);
+            appendChannelFormat(source, channels, channel);
             list.add(channel);
         }
+    }
+
+    private void appendCrossServerSettings(ConfigurationSection source, YamlConfiguration channels) {
+        ConfigurationSection crossServer = source.getConfigurationSection("Cross-Server");
+        if (crossServer == null) {
+            return;
+        }
+        channels.set("Cross-Server", null);
+        copySection(crossServer, channels.createSection("Cross-Server"));
+    }
+
+    private void appendMegaphoneSettings(ConfigurationSection source, YamlConfiguration channels) {
+        ConfigurationSection megaphone = source.getConfigurationSection("Megaphone");
+        if (megaphone == null) {
+            return;
+        }
+        channels.set("Megaphone", null);
+        copySection(megaphone, channels.createSection("Megaphone"));
+    }
+
+    private void appendChannelFormat(
+        ConfigurationSection source,
+        YamlConfiguration channels,
+        Map<String, Object> channel
+    ) {
+        ConfigurationSection formatSection = source.getConfigurationSection("Format");
+        if (formatSection == null) {
+            channel.putIfAbsent("format", "default");
+            return;
+        }
+        String channelId = String.valueOf(channel.getOrDefault("id", ""));
+        if (channelId.isBlank()) {
+            return;
+        }
+        String inheritedFormat = formatSection.getString("inherit", "");
+        if (!inheritedFormat.isBlank()) {
+            channel.put("format", inheritedFormat);
+            return;
+        }
+        String formatId = formatSection.getString("id", channelId);
+        channel.put("format", formatId);
+
+        Map<String, Object> format = new LinkedHashMap<>();
+        format.put("id", formatId);
+        format.put("channel", formatSection.getString("channel", channelId));
+        for (String key : formatSection.getKeys(false)) {
+            if ("id".equalsIgnoreCase(key) || "channel".equalsIgnoreCase(key)) {
+                continue;
+            }
+            format.put(key, sectionToValue(formatSection.get(key)));
+        }
+        List<Object> formats = new ArrayList<>(channels.getMapList("Formats"));
+        formats.add(format);
+        channels.set("Formats", formats);
+    }
+
+    private Object sectionToValue(Object value) {
+        if (value instanceof ConfigurationSection section) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            for (String key : section.getKeys(false)) {
+                map.put(key, sectionToValue(section.get(key)));
+            }
+            return map;
+        }
+        if (value instanceof List<?> list) {
+            List<Object> values = new ArrayList<>(list.size());
+            for (Object element : list) {
+                values.add(sectionToValue(element));
+            }
+            return values;
+        }
+        return value;
     }
 
     private void copySectionValue(ConfigurationSection source, ConfigurationSection target, String key) {
@@ -276,8 +534,9 @@ public final class ChatConfigFileLoader {
         return switch (name) {
             case "settings.yml", "settings.yaml" -> "00-" + name;
             case "global.yml", "global.yaml" -> "01-" + name;
-            case "world.yml", "world.yaml" -> "02-" + name;
-            case "staff.yml", "staff.yaml" -> "03-" + name;
+            case "cross-server.yml", "cross-server.yaml" -> "02-" + name;
+            case "world.yml", "world.yaml" -> "03-" + name;
+            case "staff.yml", "staff.yaml" -> "04-" + name;
             default -> "50-" + name;
         };
     }

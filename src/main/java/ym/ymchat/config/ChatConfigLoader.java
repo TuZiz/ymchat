@@ -7,6 +7,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.bukkit.configuration.file.FileConfiguration;
 import ym.ymchat.config.chat.AntiSpamSettings;
+import ym.ymchat.config.chat.ChannelSwitchSettings;
 import ym.ymchat.config.chat.ChatChannel;
 import ym.ymchat.config.chat.FormatRule;
 import ym.ymchat.config.chat.MentionSettings;
@@ -22,6 +23,7 @@ import ym.ymchat.config.color.InlineColorSettings;
 import ym.ymchat.config.crossserver.CrossServerLogSettings;
 import ym.ymchat.config.crossserver.CrossServerSettings;
 import ym.ymchat.config.crossserver.DatabaseSettings;
+import ym.ymchat.config.filter.FilterCloudSettings;
 import ym.ymchat.config.filter.FilterRule;
 import ym.ymchat.config.filter.FilterSettings;
 import ym.ymchat.config.highlight.KeywordHighlightRule;
@@ -36,6 +38,15 @@ import ym.ymchat.service.language.LanguageService;
 public final class ChatConfigLoader {
 
     private static final Pattern INLINE_CONDITION = Pattern.compile("\\{condition:\\s*(.+)}\\s*$");
+    private static final String PRIVATE_MESSAGES_DISABLED = "lang:private-messages.messages.disabled";
+    private static final String PRIVATE_MESSAGES_NO_REPLY_TARGET = "lang:private-messages.messages.no-reply-target";
+    private static final String PRIVATE_MESSAGES_OFFLINE = "lang:private-messages.messages.offline";
+    private static final String PRIVATE_MESSAGES_SELF = "lang:private-messages.messages.self";
+    private static final String ANTI_SPAM_TOO_FAST = "lang:anti-spam.messages.too-fast";
+    private static final String ANTI_SPAM_TOO_LONG = "lang:anti-spam.messages.too-long";
+    private static final String ANTI_SPAM_TOO_MANY_CAPS = "lang:anti-spam.messages.too-many-caps";
+    private static final String ANTI_SPAM_DUPLICATE = "lang:anti-spam.messages.duplicate";
+    private static final String FILTER_DEFAULT_BLOCKED = "lang:filter.default-blocked-message";
 
     private final LanguageService languageService;
 
@@ -54,23 +65,21 @@ public final class ChatConfigLoader {
         boolean debug = config.getBoolean("Options.Debug", false);
         boolean showChannelDisplay = config.getBoolean("Channels.Show-Display", false);
         String defaultChannelId = config.getString("Channels.Default", "global");
+        ChannelSwitchSettings channelSwitchSettings = parseChannelSwitchSettings(config);
         List<ChatChannel> channels = parseChannels(config);
         CrossServerSettings crossServerSettings = parseCrossServer(config);
         AntiSpamSettings antiSpamSettings = parseAntiSpam(config);
         MentionSettings mentionSettings = parseMentionSettings(config);
         ColorChatSettings colorChatSettings = parseColorChatSettings(config);
+        FixedColorSettings nameColorSettings = parseFixedColorSettings(config, "Name-Color.Fixed", FixedColorSettings.nameDefaults());
         MegaphoneSettings megaphoneSettings = new MegaphoneConfigParser(languageService).parse(config);
         PublicChatHighlightSettings publicChatHighlightSettings = parsePublicChatHighlightSettings(config);
         ItemShowcaseSettings itemShowcaseSettings = new ItemShowcaseConfigParser(languageService).parse(config);
         PrivateMessageSettings privateMessageSettings = parsePrivateMessageSettings(config);
         FilterSettings filterSettings = parseFilterSettings(config);
 
-        List<FormatRule> formats = new ArrayList<>();
-        for (Object rawFormat : config.getList("Formats", List.of())) {
-            if (rawFormat instanceof Map<?, ?> formatMap) {
-                formats.add(parseRule(formatMap));
-            }
-        }
+        List<FormatRule> formats = parseFormatRules(config.getList("Formats", List.of()));
+        formats.addAll(parseFormatRules(config.getList("Channels.Formats", List.of())));
 
         if (formats.isEmpty()) {
             formats.add(FormatRule.fallback());
@@ -83,11 +92,13 @@ public final class ChatConfigLoader {
             debug,
             showChannelDisplay,
             defaultChannelId,
+            channelSwitchSettings,
             channels,
             crossServerSettings,
             antiSpamSettings,
             mentionSettings,
             colorChatSettings,
+            nameColorSettings,
             megaphoneSettings,
             publicChatHighlightSettings,
             itemShowcaseSettings,
@@ -203,12 +214,22 @@ public final class ChatConfigLoader {
             localizedConfigString(config, "Private-Messages.Format.Sender", defaults.senderFormat()),
             localizedConfigString(config, "Private-Messages.Format.Receiver", defaults.receiverFormat()),
             localizedConfigString(config, "Private-Messages.Format.Spy", defaults.spyFormat()),
-            localizedConfigString(config, "Private-Messages.Messages.Disabled", defaults.disabledMessage()),
-            localizedConfigString(config, "Private-Messages.Messages.No-Reply-Target", defaults.noReplyTargetMessage()),
-            localizedConfigString(config, "Private-Messages.Messages.Offline", defaults.offlineMessage()),
-            localizedConfigString(config, "Private-Messages.Messages.Self", defaults.selfMessage()),
+            localizedConfigString(config, "Private-Messages.Messages.Disabled", PRIVATE_MESSAGES_DISABLED),
+            localizedConfigString(config, "Private-Messages.Messages.No-Reply-Target", PRIVATE_MESSAGES_NO_REPLY_TARGET),
+            localizedConfigString(config, "Private-Messages.Messages.Offline", PRIVATE_MESSAGES_OFFLINE),
+            localizedConfigString(config, "Private-Messages.Messages.Self", PRIVATE_MESSAGES_SELF),
             rules
         );
+    }
+
+    private List<FormatRule> parseFormatRules(List<?> rawFormats) {
+        List<FormatRule> formats = new ArrayList<>();
+        for (Object rawFormat : rawFormats == null ? List.of() : rawFormats) {
+            if (rawFormat instanceof Map<?, ?> formatMap) {
+                formats.add(parseRule(formatMap));
+            }
+        }
+        return formats;
     }
 
     private FilterSettings parseFilterSettings(FileConfiguration config) {
@@ -224,13 +245,34 @@ public final class ChatConfigLoader {
                     asBoolean(map.get("regex"), false),
                     asBoolean(map.get("case-sensitive"), false),
                     localizedString(map.get("replacement"), "***"),
-                    localizedString(map.get("message"), "&#777777[&#FF6B6B!&#777777] &#FF6B6BYour message contains blocked content."),
+                    localizedString(map.get("message"), FILTER_DEFAULT_BLOCKED),
                     asString(map.get("bypass-permission"), "ymchat.filter.bypass"),
                     rawStringList(map.get("channels"))
                 ));
             }
         }
-        return new FilterSettings(config.getBoolean("Filter.Enabled", defaults.enabled()), rules);
+        return new FilterSettings(
+            config.getBoolean("Filter.Enabled", defaults.enabled()),
+            parseFilterCloudSettings(config),
+            rules
+        );
+    }
+
+    private FilterCloudSettings parseFilterCloudSettings(FileConfiguration config) {
+        FilterCloudSettings defaults = FilterCloudSettings.defaults();
+        return new FilterCloudSettings(
+            config.getBoolean("Filter.Cloud.Enabled", defaults.enabled()),
+            config.getString("Filter.Cloud.Url", defaults.url()),
+            config.getString("Filter.Cloud.Array-Path", defaults.arrayPath()),
+            config.getLong("Filter.Cloud.Refresh-Minutes", defaults.refreshMinutes()),
+            config.getString("Filter.Cloud.Mode", defaults.mode()),
+            localizedConfigString(config, "Filter.Cloud.Replacement", defaults.replacement()),
+            localizedConfigString(config, "Filter.Cloud.Message", FILTER_DEFAULT_BLOCKED),
+            config.getString("Filter.Cloud.Bypass-Permission", defaults.bypassPermission()),
+            config.getStringList("Filter.Cloud.Scopes").isEmpty()
+                ? defaults.scopes()
+                : config.getStringList("Filter.Cloud.Scopes")
+        );
     }
 
     private List<ChatChannel> parseChannels(FileConfiguration config) {
@@ -241,13 +283,17 @@ public final class ChatConfigLoader {
                 if (id.isBlank()) {
                     continue;
                 }
+                String format = asString(map.get("format"), "").trim();
+                if (format.isBlank()) {
+                    format = "default";
+                }
                 channels.add(new ChatChannel(
                     id,
                     localizedString(map.get("display"), ""),
                     TargetMode.parse(asString(map.get("target"), "ALL")),
                     asString(map.get("permission"), ""),
-                    asString(map.get("format"), ""),
-                    asBoolean(map.get("cross-server"), "global".equals(id)),
+                    format,
+                    asBoolean(map.get("cross-server"), false),
                     rawStringList(map.get("aliases"))
                 ));
             }
@@ -255,11 +301,21 @@ public final class ChatConfigLoader {
 
         boolean usedFallbackChannels = channels.isEmpty();
         if (usedFallbackChannels) {
-            channels.add(new ChatChannel("global", "&#777777[&#33CCFFGlobal&#777777] ", TargetMode.ALL, "", "default", true, List.of("global", "g")));
+            channels.add(new ChatChannel("global", "&#777777[&#33CCFFGlobal&#777777] ", TargetMode.ALL, "", "default", false, List.of("global", "g")));
+            channels.add(new ChatChannel("cross-server", "&#777777[&#33CCFFCross-Server&#777777] ", TargetMode.ALL, "", "cross-server", true, List.of("cross", "cf")));
             channels.add(new ChatChannel("world", "&#777777[&#FFB833World&#777777] ", TargetMode.ALL, "", "world", false, List.of("world", "w")));
             channels.add(new ChatChannel("staff", "&#777777[&#FF6B6BStaff&#777777] ", TargetMode.ALL, "ymchat.channel.staff", "staff", false, List.of("staff", "s")));
         }
         return channels;
+    }
+
+    private ChannelSwitchSettings parseChannelSwitchSettings(FileConfiguration config) {
+        ChannelSwitchSettings defaults = ChannelSwitchSettings.defaults();
+        return new ChannelSwitchSettings(
+            config.getBoolean("Channels.Switch.Enabled", defaults.enabled()),
+            config.getString("Channels.Switch.Admin-Permission", defaults.adminPermission()),
+            config.getBoolean("Channels.Switch.Cross-Server-Admin-Only", defaults.crossServerAdminOnly())
+        );
     }
 
     private AntiSpamSettings parseAntiSpam(FileConfiguration config) {
@@ -270,12 +326,13 @@ public final class ChatConfigLoader {
             config.getLong("Anti-Spam.Cooldown-Millis", defaults.cooldownMillis()),
             config.getInt("Anti-Spam.Max-Length", defaults.maxLength()),
             config.getDouble("Anti-Spam.Caps-Ratio", defaults.capsRatio()),
+            config.getInt("Anti-Spam.Caps-Min-Letters", defaults.capsMinLetters()),
             config.getLong("Anti-Spam.Duplicate-Window-Millis", defaults.duplicateWindowMillis()),
             config.getBoolean("Anti-Spam.Block-Duplicate", defaults.blockDuplicate()),
-            localizedConfigString(config, "Anti-Spam.Messages.Too-Fast", defaults.tooFastMessage()),
-            localizedConfigString(config, "Anti-Spam.Messages.Too-Long", defaults.tooLongMessage()),
-            localizedConfigString(config, "Anti-Spam.Messages.Too-Many-Caps", defaults.tooManyCapsMessage()),
-            localizedConfigString(config, "Anti-Spam.Messages.Duplicate", defaults.duplicateMessage())
+            localizedConfigString(config, "Anti-Spam.Messages.Too-Fast", ANTI_SPAM_TOO_FAST),
+            localizedConfigString(config, "Anti-Spam.Messages.Too-Long", ANTI_SPAM_TOO_LONG),
+            localizedConfigString(config, "Anti-Spam.Messages.Too-Many-Caps", ANTI_SPAM_TOO_MANY_CAPS),
+            localizedConfigString(config, "Anti-Spam.Messages.Duplicate", ANTI_SPAM_DUPLICATE)
         );
     }
 
@@ -289,7 +346,8 @@ public final class ChatConfigLoader {
             config.getBoolean("Mentions.Notify-Actionbar", defaults.notifyActionbar()),
             config.getBoolean("Mentions.Allow-Everyone", defaults.allowEveryone()),
             config.getString("Mentions.Everyone-Permission", defaults.everyonePermission()),
-            config.getString("Mentions.Everyone-Token", defaults.everyoneToken())
+            config.getString("Mentions.Everyone-Token", defaults.everyoneToken()),
+            config.getBoolean("Mentions.Match-Plain-Names", defaults.matchPlainNames())
         );
     }
 
@@ -297,8 +355,20 @@ public final class ChatConfigLoader {
         ColorChatSettings defaults = ColorChatSettings.defaults();
         InlineColorSettings inlineDefaults = defaults.inlineSettings();
         FixedColorSettings fixedDefaults = defaults.fixedSettings();
+        FixedColorSettings fixedSettings = parseFixedColorSettings(config, "Color-Chat.Fixed", fixedDefaults);
+        return new ColorChatSettings(
+            new InlineColorSettings(
+                config.getString("Color-Chat.Inline.legacy-permission", inlineDefaults.legacyPermission()),
+                config.getString("Color-Chat.Inline.format-permission", inlineDefaults.formatPermission()),
+                config.getString("Color-Chat.Inline.rgb-permission", inlineDefaults.rgbPermission())
+            ),
+            fixedSettings
+        );
+    }
+
+    private FixedColorSettings parseFixedColorSettings(FileConfiguration config, String path, FixedColorSettings defaults) {
         List<ColorPreset> rgbColors = new ArrayList<>();
-        for (Object rawPreset : config.getList("Color-Chat.Fixed.rgb-colors", List.of())) {
+        for (Object rawPreset : config.getList(path + ".rgb-colors", List.of())) {
             if (rawPreset instanceof Map<?, ?> map) {
                 rgbColors.add(new ColorPreset(
                     asString(map.get("id"), ""),
@@ -309,7 +379,7 @@ public final class ChatConfigLoader {
             }
         }
         if (rgbColors.isEmpty()) {
-            rgbColors = fixedDefaults.rgbColors().stream()
+            rgbColors = defaults.rgbColors().stream()
                 .map(color -> new ColorPreset(
                     color.id(),
                     localizedString(color.display(), color.display()),
@@ -318,16 +388,9 @@ public final class ChatConfigLoader {
                 ))
                 .toList();
         }
-        return new ColorChatSettings(
-            new InlineColorSettings(
-                config.getString("Color-Chat.Inline.legacy-permission", inlineDefaults.legacyPermission()),
-                config.getString("Color-Chat.Inline.format-permission", inlineDefaults.formatPermission()),
-                config.getString("Color-Chat.Inline.rgb-permission", inlineDefaults.rgbPermission())
-            ),
-            new FixedColorSettings(
-                config.getBoolean("Color-Chat.Fixed.enabled", fixedDefaults.enabled()),
-                rgbColors
-            )
+        return new FixedColorSettings(
+            config.getBoolean(path + ".enabled", defaults.enabled()),
+            rgbColors
         );
     }
 
@@ -348,10 +411,15 @@ public final class ChatConfigLoader {
                     rawStringList(map.get("channels")),
                     asString(map.get("type"), "literal"),
                     asString(map.get("match"), ""),
+                    rawStringList(map.get("matches")),
                     asBoolean(map.get("case-sensitive"), false),
                     asBoolean(map.get("whole-word"), false),
                     asString(map.get("color"), ""),
-                    rawStringList(map.get("formats"))
+                    rawStringList(map.get("formats")),
+                    rawStringList(map.get("hover")),
+                    asString(map.get("suggest"), ""),
+                    asString(map.get("command"), ""),
+                    asString(map.get("copy"), "")
                 ));
             }
         }
@@ -370,7 +438,11 @@ public final class ChatConfigLoader {
                     patternSection.getStringList(id + ".channels"),
                     patternSection.getStringList(id + ".regexes"),
                     patternSection.getString(id + ".color", ""),
-                    patternSection.getStringList(id + ".formats")
+                    patternSection.getStringList(id + ".formats"),
+                    patternSection.getStringList(id + ".hover"),
+                    patternSection.getString(id + ".suggest", ""),
+                    patternSection.getString(id + ".command", ""),
+                    patternSection.getString(id + ".copy", "")
                 ));
             }
         }

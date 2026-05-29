@@ -13,7 +13,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -26,35 +25,161 @@ class ChatConfigFileLoaderTest {
     Path tempDir;
 
     @Test
-    void loadsRootConfigAndChannelFolderFromFilesSection() throws Exception {
-        YamlConfiguration root = resourceYaml("config.yml");
-        copyDefaultChannels(tempDir);
-        copyDefaultSplitFiles(tempDir);
-        List<String> warnings = new ArrayList<>();
-
-        FileConfiguration loaded = new ChatConfigFileLoader(tempDir.toFile(), this::resource, warnings::add).load(root);
-
-        assertFalse(loaded.isConfigurationSection("Files"));
-        assertEquals("global", loaded.getString("Channels.Default"));
-        assertEquals(3, loaded.getMapList("Channels.List").size());
-        assertEquals("survival-1", loaded.getString("Cross-Server.Server-Id"));
-        assertTrue(warnings.isEmpty(), warnings::toString);
-    }
-
-    @Test
-    void loadsBundledChannelDefaultsWhenChannelFolderIsMissing() throws Exception {
+    void loadsCompactRootConfigWithoutDefaultSplitFiles() throws Exception {
         YamlConfiguration root = resourceYaml("config.yml");
         List<String> warnings = new ArrayList<>();
 
         FileConfiguration loaded = new ChatConfigFileLoader(tempDir.toFile(), this::resource, warnings::add).load(root);
         ChatPluginConfig loadedConfig = new ChatConfigLoader().load(loaded);
 
+        assertFalse(loaded.isConfigurationSection("Files"));
+        assertFalse(loaded.isList("Formats"));
         assertEquals("global", loaded.getString("Channels.Default"));
-        assertEquals(3, loaded.getMapList("Channels.List").size());
-        assertEquals("staff", loaded.getMapList("Channels.List").get(2).get("id"));
+        assertEquals(4, loaded.getMapList("Channels.List").size());
+        assertEquals(3, loaded.getMapList("Channels.Formats").size());
+        assertEquals("survival-1", loaded.getString("Cross-Server.Server-Id"));
+        assertEquals("megaphones.yml", loaded.getString("Megaphone.Data-File"));
+        assertEquals(1, loaded.getInt("Megaphone.Modes.Chat.Cost"));
+        assertEquals("default", loadedConfig.formats().getFirst().id());
+        assertTrue(loadedConfig.privateMessageSettings().enabled());
+        assertTrue(loadedConfig.itemShowcaseSettings().enabled());
+        assertEquals(1, loadedConfig.megaphoneSettings().mode(ym.ymchat.config.megaphone.MegaphoneMode.CHAT).cost());
+        assertTrue(warnings.isEmpty(), warnings::toString);
+    }
+
+    @Test
+    void readsExistingLegacySidecarFilesWhenRootConfigOmitsSections() throws Exception {
+        YamlConfiguration root = resourceYaml("config.yml");
+        root.set("Channels", null);
+        root.set("Formats", null);
+        root.set("Private-Messages", null);
+        Files.writeString(tempDir.resolve("formats.yml"), """
+            Formats:
+              - id: legacy-default
+                channel: global
+                priority: 100
+                msg:
+                  default-color: '&f'
+                name:
+                  - text: '&a%player_name%'
+                message:
+                  variants:
+                    - text: '&f: {message}'
+            """, StandardCharsets.UTF_8);
+        Files.writeString(tempDir.resolve("features.yml"), """
+            Private-Messages:
+              Enabled: true
+              Format:
+                Sender: '&d[PM -> %target_name%] &f{message}'
+            """, StandardCharsets.UTF_8);
+        Path channels = tempDir.resolve("channels");
+        Files.createDirectories(channels);
+        Files.writeString(channels.resolve("settings.yml"), """
+            Show-Display: false
+            Default: global
+            """, StandardCharsets.UTF_8);
+        Files.writeString(channels.resolve("global.yml"), """
+            id: global
+            display: '&8[&bGlobal&8] '
+            target: ALL
+            format: legacy-default
+            cross-server: true
+            """, StandardCharsets.UTF_8);
+        List<String> warnings = new ArrayList<>();
+
+        FileConfiguration loaded = new ChatConfigFileLoader(tempDir.toFile(), this::resource, warnings::add).load(root);
+        ChatPluginConfig loadedConfig = new ChatConfigLoader().load(loaded);
+
+        assertFalse(loaded.isConfigurationSection("Files"));
+        assertEquals("global", loaded.getString("Channels.Default"));
+        assertEquals(1, loaded.getMapList("Channels.List").size());
+        assertEquals("survival-1", loaded.getString("Cross-Server.Server-Id"));
+        assertEquals("legacy-default", loadedConfig.formats().getFirst().id());
+        assertTrue(loadedConfig.privateMessageSettings().enabled());
+        assertTrue(warnings.isEmpty(), warnings::toString);
+    }
+
+    @Test
+    void loadsBundledConfigDefaultsWhenSectionsAreMissing() throws Exception {
+        YamlConfiguration root = yaml("""
+            Options:
+              Language: zh_cn
+            """);
+        List<String> warnings = new ArrayList<>();
+
+        FileConfiguration loaded = new ChatConfigFileLoader(tempDir.toFile(), this::resource, warnings::add).load(root);
+        ChatPluginConfig loadedConfig = new ChatConfigLoader().load(loaded);
+
+        assertEquals("global", loaded.getString("Channels.Default"));
+        assertEquals(4, loaded.getMapList("Channels.List").size());
+        assertEquals(3, loaded.getMapList("Channels.Formats").size());
+        assertEquals("staff", loaded.getMapList("Channels.List").get(3).get("id"));
+        assertEquals("megaphones.yml", loaded.getString("Megaphone.Data-File"));
         assertEquals("&#FFFFFF: &#E0E0E0{message}", loadedConfig.formats().getFirst().messageVariants().get(3).text());
-        assertTrue(warnings.stream().anyMatch(message -> message.contains("channels")));
-        assertTrue(warnings.stream().anyMatch(message -> message.contains("formats.yml")));
+        assertTrue(warnings.isEmpty(), warnings::toString);
+    }
+
+    @Test
+    void loadsBundledHighlightsFromStandaloneResourceByDefault() throws Exception {
+        YamlConfiguration root = yaml("""
+            Options:
+              Language: zh_cn
+            """);
+        List<String> warnings = new ArrayList<>();
+
+        FileConfiguration loaded = new ChatConfigFileLoader(tempDir.toFile(), this::resource, warnings::add).load(root);
+        ChatPluginConfig loadedConfig = new ChatConfigLoader().load(loaded);
+
+        assertTrue(loadedConfig.publicChatHighlightSettings().enabled());
+        assertEquals("market-buy", loadedConfig.publicChatHighlightSettings().keywordRules().getFirst().id());
+        assertFalse(loadedConfig.publicChatHighlightSettings().keywordRules().getFirst().hover().isEmpty());
+        assertTrue(warnings.isEmpty(), warnings::toString);
+    }
+
+    @Test
+    void keepsLegacyRulesHighlightsWhenStandaloneFileIsStillBundledDefault() throws Exception {
+        Files.writeString(tempDir.resolve("highlights.yml"),
+            Files.readString(Path.of("src/main/resources/highlights.yml"), StandardCharsets.UTF_8),
+            StandardCharsets.UTF_8);
+        Files.writeString(tempDir.resolve("rules.yml"), """
+            Highlights:
+              Enabled: false
+              Keyword-Rules:
+                - id: legacy-highlight
+                  enabled: true
+                  priority: 100
+                  channels: ['*']
+                  type: literal
+                  match: 'legacy'
+                  color: '&#123456'
+            Anti-Spam:
+              Enabled: true
+            """, StandardCharsets.UTF_8);
+        List<String> warnings = new ArrayList<>();
+
+        FileConfiguration loaded = new ChatConfigFileLoader(tempDir.toFile(), this::resource, warnings::add).load(resourceYaml("config.yml"));
+        ChatPluginConfig loadedConfig = new ChatConfigLoader().load(loaded);
+
+        assertFalse(loadedConfig.publicChatHighlightSettings().enabled());
+        assertEquals("legacy-highlight", loadedConfig.publicChatHighlightSettings().keywordRules().getFirst().id());
+        assertTrue(warnings.isEmpty(), warnings::toString);
+    }
+
+    @Test
+    void rootMegaphoneConfigOverridesBundledChannelMegaphoneDefaults() throws Exception {
+        YamlConfiguration root = resourceYaml("config.yml");
+        root.set("Megaphone.Data-File", "custom-horns.yml");
+        root.set("Megaphone.Modes.Chat.Cost", 9);
+        List<String> warnings = new ArrayList<>();
+
+        FileConfiguration loaded = new ChatConfigFileLoader(tempDir.toFile(), this::resource, warnings::add).load(root);
+        ChatPluginConfig loadedConfig = new ChatConfigLoader().load(loaded);
+
+        assertEquals("custom-horns.yml", loaded.getString("Megaphone.Data-File"));
+        assertEquals(9, loaded.getInt("Megaphone.Modes.Chat.Cost"));
+        assertEquals("custom-horns.yml", loadedConfig.megaphoneSettings().dataFile());
+        assertEquals(9, loadedConfig.megaphoneSettings().mode(ym.ymchat.config.megaphone.MegaphoneMode.CHAT).cost());
+        assertTrue(warnings.isEmpty(), warnings::toString);
     }
 
     @Test
@@ -209,19 +334,4 @@ class ChatConfigFileLoaderTest {
         }
     }
 
-    private void copyDefaultChannels(Path target) throws IOException {
-        Path channels = target.resolve("channels");
-        Files.createDirectories(channels);
-        try (Stream<Path> stream = Files.walk(Path.of("src/main/resources/channels"))) {
-            for (Path file : stream.filter(Files::isRegularFile).toList()) {
-                Files.copy(file, channels.resolve(file.getFileName()));
-            }
-        }
-    }
-
-    private void copyDefaultSplitFiles(Path target) throws IOException {
-        for (String name : List.of("formats.yml", "rules.yml", "features.yml")) {
-            Files.copy(Path.of("src/main/resources").resolve(name), target.resolve(name));
-        }
-    }
 }

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 
 import ym.ymchat.service.text.RichText;
 public final class PublicChatColorService {
@@ -185,7 +187,7 @@ public final class PublicChatColorService {
         String text = visiblePlainText == null ? "" : visiblePlainText;
         List<TextSpan> spans = text.isEmpty()
             ? List.of()
-            : List.of(new TextSpan(text, normalizedBaseColor == null ? "&f" : normalizedBaseColor, ""));
+            : List.of(new TextSpan(text, normalizedBaseColor == null ? "&f" : normalizedBaseColor, "", null, null));
         return new PreparedPublicChatMessage(
             text,
             text,
@@ -206,7 +208,7 @@ public final class PublicChatColorService {
         if (currentText.isEmpty()) {
             return;
         }
-        spans.add(new TextSpan(currentText.toString(), state.currentColorValue(), state.formatCodeSuffix()));
+        spans.add(new TextSpan(currentText.toString(), state.currentColorValue(), state.formatCodeSuffix(), null, null));
         currentText.setLength(0);
     }
 
@@ -328,7 +330,7 @@ public final class PublicChatColorService {
     public record PermissionAccess(boolean legacyAllowed, boolean formatAllowed, boolean rgbAllowed) {
     }
 
-    public record TextSpan(String text, String colorValue, String formatCodes) {
+    public record TextSpan(String text, String colorValue, String formatCodes, Component hover, ClickEvent click) {
 
         public String stylePrefix() {
             return (colorValue == null ? "" : colorValue) + (formatCodes == null ? "" : formatCodes);
@@ -350,7 +352,14 @@ public final class PublicChatColorService {
                 if (span.text() == null || span.text().isEmpty()) {
                     continue;
                 }
-                builder.append(Component.text(span.text()).style(RichText.styleOf(span.stylePrefix())));
+                Component component = Component.text(span.text()).style(RichText.styleOf(span.stylePrefix()));
+                if (span.hover() != null) {
+                    component = component.hoverEvent(HoverEvent.showText(span.hover()));
+                }
+                if (span.click() != null) {
+                    component = component.clickEvent(span.click());
+                }
+                builder.append(component);
             }
             return builder.build();
         }

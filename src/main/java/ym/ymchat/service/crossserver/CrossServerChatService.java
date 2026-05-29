@@ -27,6 +27,7 @@ import ym.ymchat.config.crossserver.DatabaseSettings;
 import ym.ymchat.config.chat.TargetMode;
 
 import ym.ymchat.service.chat.MentionService;
+import ym.ymchat.service.color.ColorScope;
 import ym.ymchat.service.color.PlayerColorPreference;
 import ym.ymchat.service.showcase.ShowcaseStoredSnapshot;
 import ym.ymchat.service.text.RichText;
@@ -217,13 +218,18 @@ public final class CrossServerChatService implements AutoCloseable {
     }
 
     public PlayerColorPreference findPlayerColorPreference(UUID playerId) throws SQLException {
+        return findPlayerColorPreference(playerId, ColorScope.CHAT);
+    }
+
+    public PlayerColorPreference findPlayerColorPreference(UUID playerId, ColorScope scope) throws SQLException {
         if (!isEnabled()) {
             return null;
         }
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(
-                 "SELECT mode, value FROM " + playerColorTableName() + " WHERE player_uuid = ?")) {
+                 playerColorSelectSql(playerColorTableName()))) {
             statement.setString(1, playerId.toString());
+            statement.setString(2, normalizePlayerColorScope(scope));
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (!resultSet.next()) {
                     return null;
@@ -234,30 +240,37 @@ public final class CrossServerChatService implements AutoCloseable {
     }
 
     public void savePlayerColorPreference(UUID playerId, PlayerColorPreference preference) throws SQLException {
+        savePlayerColorPreference(playerId, ColorScope.CHAT, preference);
+    }
+
+    public void savePlayerColorPreference(UUID playerId, ColorScope scope, PlayerColorPreference preference) throws SQLException {
         if (!isEnabled()) {
             throw new IllegalStateException("Cross-server chat service is unavailable.");
         }
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(
-                 "INSERT INTO " + playerColorTableName()
-                     + " (player_uuid, mode, value, updated_at) VALUES (?, ?, ?, NOW()) "
-                     + "ON CONFLICT (player_uuid) DO UPDATE SET "
-                     + "mode = EXCLUDED.mode, value = EXCLUDED.value, updated_at = EXCLUDED.updated_at")) {
+                 playerColorUpsertSql(playerColorTableName()))) {
             statement.setString(1, playerId.toString());
-            statement.setString(2, normalizePlayerColorMode(preference));
-            statement.setString(3, preference.value());
+            statement.setString(2, normalizePlayerColorScope(scope));
+            statement.setString(3, normalizePlayerColorMode(preference));
+            statement.setString(4, preference.value());
             statement.executeUpdate();
         }
     }
 
     public void removePlayerColorPreference(UUID playerId) throws SQLException {
+        removePlayerColorPreference(playerId, ColorScope.CHAT);
+    }
+
+    public void removePlayerColorPreference(UUID playerId, ColorScope scope) throws SQLException {
         if (!isEnabled()) {
             throw new IllegalStateException("Cross-server chat service is unavailable.");
         }
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(
-                 "DELETE FROM " + playerColorTableName() + " WHERE player_uuid = ?")) {
+                 playerColorDeleteSql(playerColorTableName()))) {
             statement.setString(1, playerId.toString());
+            statement.setString(2, normalizePlayerColorScope(scope));
             statement.executeUpdate();
         }
     }
@@ -400,14 +413,9 @@ public final class CrossServerChatService implements AutoCloseable {
             statement.executeUpdate(
                 "CREATE INDEX IF NOT EXISTS idx_ymchat_showcase_snapshots_type ON " + snapshotTable + " (snapshot_type)"
             );
-            statement.executeUpdate(
-                "CREATE TABLE IF NOT EXISTS " + playerColorTable + " ("
-                    + "player_uuid VARCHAR(36) PRIMARY KEY, "
-                    + "mode VARCHAR(16) NOT NULL, "
-                    + "value TEXT NOT NULL DEFAULT '', "
-                    + "updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()"
-                    + ")"
-            );
+            for (String sql : playerColorSchemaStatements(playerColorTable)) {
+                statement.executeUpdate(sql);
+            }
             statement.executeUpdate(
                 "CREATE TABLE IF NOT EXISTS " + megaphoneTable + " ("
                     + "player_uuid VARCHAR(36) PRIMARY KEY, "
@@ -504,7 +512,12 @@ public final class CrossServerChatService implements AutoCloseable {
             return;
         }
 
-        Component component = GSON.deserialize(message.componentJson());
+        Component component = CrossServerMessageHighlighter.apply(
+            GSON.deserialize(message.componentJson()),
+            message.channelId(),
+            plugin.getPublicChatHighlightService(),
+            plugin.getChatConfig().publicChatHighlightSettings()
+        );
         if (settings.showOrigin()) {
             String originPrefix = settings.originFormat()
                 .replace("%origin_server%", message.serverName())
@@ -782,6 +795,82 @@ public final class CrossServerChatService implements AutoCloseable {
         return qualifiedMessageTable + "_megaphone_balances";
     }
 
+    static List<String> playerColorSchemaStatements(String table) {
+        QualifiedTable qualifiedTable = QualifiedTable.parse(table);
+        String schemaLiteral = sqlLiteral(qualifiedTable.schema());
+        String tableLiteral = sqlLiteral(qualifiedTable.name());
+        return List.of(
+            "CREATE TABLE IF NOT EXISTS " + table + " ("
+                + "player_uuid VARCHAR(36) NOT NULL, "
+                + "scope VARCHAR(16) NOT NULL DEFAULT 'chat', "
+                + "mode VARCHAR(16) NOT NULL, "
+                + "value TEXT NOT NULL DEFAULT '', "
+                + "updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), "
+                + "PRIMARY KEY (player_uuid, scope)"
+                + ")",
+            "ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS scope VARCHAR(16) NOT NULL DEFAULT 'chat'",
+            "ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS mode VARCHAR(16) NOT NULL DEFAULT 'off'",
+            "ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS value TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE " + table + " ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()",
+            "UPDATE " + table + " SET scope = 'chat' WHERE scope IS NULL OR scope = ''",
+            "DO $$ "
+                + "DECLARE existing_pk text; "
+                + "BEGIN "
+                + "SELECT tc.constraint_name INTO existing_pk "
+                + "FROM information_schema.table_constraints tc "
+                + "WHERE tc.table_schema = '" + schemaLiteral + "' "
+                + "AND tc.table_name = '" + tableLiteral + "' "
+                + "AND tc.constraint_type = 'PRIMARY KEY' LIMIT 1; "
+                + "IF existing_pk IS NOT NULL AND NOT EXISTS ("
+                + "SELECT 1 FROM information_schema.key_column_usage kcu "
+                + "WHERE kcu.table_schema = '" + schemaLiteral + "' "
+                + "AND kcu.table_name = '" + tableLiteral + "' "
+                + "AND kcu.constraint_name = existing_pk "
+                + "AND kcu.column_name = 'scope') THEN "
+                + "EXECUTE format('ALTER TABLE %I.%I DROP CONSTRAINT %I', '"
+                + schemaLiteral + "', '" + tableLiteral + "', existing_pk); "
+                + "END IF; "
+                + "IF NOT EXISTS ("
+                + "SELECT 1 FROM information_schema.table_constraints tc "
+                + "WHERE tc.table_schema = '" + schemaLiteral + "' "
+                + "AND tc.table_name = '" + tableLiteral + "' "
+                + "AND tc.constraint_type = 'PRIMARY KEY' "
+                + "AND EXISTS (SELECT 1 FROM information_schema.key_column_usage kcu "
+                + "WHERE kcu.table_schema = tc.table_schema "
+                + "AND kcu.table_name = tc.table_name "
+                + "AND kcu.constraint_name = tc.constraint_name "
+                + "AND kcu.column_name = 'player_uuid') "
+                + "AND EXISTS (SELECT 1 FROM information_schema.key_column_usage kcu "
+                + "WHERE kcu.table_schema = tc.table_schema "
+                + "AND kcu.table_name = tc.table_name "
+                + "AND kcu.constraint_name = tc.constraint_name "
+                + "AND kcu.column_name = 'scope')) THEN "
+                + "EXECUTE format('ALTER TABLE %I.%I ADD PRIMARY KEY (player_uuid, scope)', '"
+                + schemaLiteral + "', '" + tableLiteral + "'); "
+                + "END IF; "
+                + "END $$"
+        );
+    }
+
+    static String playerColorSelectSql(String table) {
+        return "SELECT mode, value FROM " + table + " WHERE player_uuid = ? AND scope = ?";
+    }
+
+    static String playerColorUpsertSql(String table) {
+        return "INSERT INTO " + table
+            + " (player_uuid, scope, mode, value, updated_at) VALUES (?, ?, ?, ?, NOW()) "
+            + "ON CONFLICT (player_uuid, scope) DO UPDATE SET "
+            + "mode = EXCLUDED.mode, value = EXCLUDED.value, updated_at = EXCLUDED.updated_at";
+    }
+
+    static String playerColorDeleteSql(String table) {
+        return "DELETE FROM " + table + " WHERE player_uuid = ? AND scope = ?";
+    }
+
+    static String normalizePlayerColorScope(ColorScope scope) {
+        return (scope == null ? ColorScope.CHAT : scope).storageKey();
+    }
+
     static String normalizePlayerColorMode(PlayerColorPreference preference) {
         return switch (preference.mode()) {
             case LEGACY -> "legacy";
@@ -797,6 +886,10 @@ public final class CrossServerChatService implements AutoCloseable {
         }
         PlayerColorPreference.Mode parsedMode = PlayerColorPreference.Mode.parse(mode.toLowerCase(Locale.ROOT));
         return parsedMode == PlayerColorPreference.Mode.PRESET ? null : new PlayerColorPreference(parsedMode, value);
+    }
+
+    private static String sqlLiteral(String input) {
+        return input.replace("'", "''");
     }
 
     private void ensureMegaphoneRow(Connection connection, String table, UUID playerId, String playerName) throws SQLException {
@@ -887,6 +980,18 @@ public final class CrossServerChatService implements AutoCloseable {
     }
 
     private record BackfillRow(long id, String plainText) {
+    }
+
+    private record QualifiedTable(String schema, String name) {
+
+        private static QualifiedTable parse(String table) {
+            String value = table == null || table.isBlank() ? "public.ymchat_cross_messages_player_colors" : table;
+            int separator = value.lastIndexOf('.');
+            if (separator < 0) {
+                return new QualifiedTable("public", value);
+            }
+            return new QualifiedTable(value.substring(0, separator), value.substring(separator + 1));
+        }
     }
 
     private record RemoteChatMessage(

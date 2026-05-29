@@ -1,5 +1,7 @@
 package ym.ymchat.service.chat;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -21,6 +23,8 @@ import ym.ymchat.service.language.LanguageService;
 import ym.ymchat.service.platform.PlatformBridge;
 import ym.ymchat.service.text.RichText;
 public final class MentionService {
+
+    private static final Pattern PLAIN_NAME_PATTERN = Pattern.compile("(?<![@A-Za-z0-9_])([A-Za-z0-9_]{1,16})(?![A-Za-z0-9_])");
 
     private final LanguageService languageService;
 
@@ -58,24 +62,58 @@ public final class MentionService {
         String input = visiblePlainText == null ? "" : visiblePlainText;
         Pattern pattern = Pattern.compile(Pattern.quote(settings.prefix()) + "([A-Za-z0-9_]{1,16})");
         Matcher matcher = pattern.matcher(input);
-        Set<String> names = new LinkedHashSet<>();
-        boolean everyoneMentioned = false;
-        List<MentionRange> highlightRanges = new java.util.ArrayList<>();
+        List<MentionHit> hits = new ArrayList<>();
 
         while (matcher.find()) {
             String token = matcher.group(1);
             if (settings.allowEveryone()
                 && token.equalsIgnoreCase(settings.everyoneToken())
                 && everyoneAllowed) {
-                everyoneMentioned = true;
-                highlightRanges.add(new MentionRange(matcher.start(), matcher.end()));
+                hits.add(new MentionHit(token, matcher.start(), matcher.end(), true));
             } else if (onlinePlayerLookup.test(token)) {
-                names.add(token);
-                highlightRanges.add(new MentionRange(matcher.start(), matcher.end()));
+                hits.add(new MentionHit(token, matcher.start(), matcher.end(), false));
             }
         }
 
+        if (settings.matchPlainNames()) {
+            Matcher plainNameMatcher = PLAIN_NAME_PATTERN.matcher(input);
+            while (plainNameMatcher.find()) {
+                String token = plainNameMatcher.group(1);
+                if (prefixedAt(input, plainNameMatcher.start(1), settings.prefix())) {
+                    continue;
+                }
+                if (onlinePlayerLookup.test(token)) {
+                    hits.add(new MentionHit(token, plainNameMatcher.start(1), plainNameMatcher.end(1), false));
+                }
+            }
+        }
+
+        hits.sort(Comparator.comparingInt(MentionHit::start).thenComparingInt(MentionHit::end));
+        Set<String> names = new LinkedHashSet<>();
+        boolean everyoneMentioned = false;
+        List<MentionRange> highlightRanges = new ArrayList<>();
+        int lastEnd = -1;
+        for (MentionHit hit : hits) {
+            if (hit.start() < lastEnd) {
+                continue;
+            }
+            if (hit.everyone()) {
+                everyoneMentioned = true;
+            } else {
+                names.add(hit.name());
+            }
+            highlightRanges.add(new MentionRange(hit.start(), hit.end()));
+            lastEnd = hit.end();
+        }
+
         return new MentionResult(List.copyOf(names), everyoneMentioned, List.copyOf(highlightRanges));
+    }
+
+    private boolean prefixedAt(String input, int tokenStart, String prefix) {
+        if (input == null || prefix == null || prefix.isBlank() || tokenStart < prefix.length()) {
+            return false;
+        }
+        return input.regionMatches(tokenStart - prefix.length(), prefix, 0, prefix.length());
     }
 
     public List<Player> resolveMentionedRecipients(Player sender, List<Player> recipients, MentionResult result) {
@@ -202,6 +240,9 @@ public final class MentionService {
     }
 
     public record MentionRange(int start, int end) {
+    }
+
+    private record MentionHit(String name, int start, int end, boolean everyone) {
     }
 
     public record MentionResult(List<String> mentionedNames, boolean everyoneMentioned, List<MentionRange> highlightRanges) {

@@ -32,4 +32,14 @@ public record FixedColorSettings(
             )
         );
     }
+
+    public static FixedColorSettings nameDefaults() {
+        return new FixedColorSettings(
+            true,
+            List.of(
+                new ColorPreset("pink", "&#FF99CCPink", "ymchat.namecolor.rgb.pink", "#FF55FF"),
+                new ColorPreset("sky", "&#33CCFFSky", "ymchat.namecolor.rgb.sky", "#55CCFF")
+            )
+        );
+    }
 }

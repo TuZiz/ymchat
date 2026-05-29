@@ -6,6 +6,7 @@ public record AntiSpamSettings(
     long cooldownMillis,
     int maxLength,
     double capsRatio,
+    int capsMinLetters,
     long duplicateWindowMillis,
     boolean blockDuplicate,
     String tooFastMessage,
@@ -20,13 +21,14 @@ public record AntiSpamSettings(
             "ymchat.bypass.antispam",
             1500L,
             120,
-            0.7D,
+            0D,
+            8,
             30000L,
-            true,
-            "&#777777[&#FFD700!&#777777] &#FFD700You are sending messages too quickly.",
-            "&#777777[&#FFD700!&#777777] &#FFD700Your message is too long.",
-            "&#777777[&#FFD700!&#777777] &#FFD700Please avoid excessive capital letters.",
-            "&#777777[&#FFD700!&#777777] &#FFD700Please do not repeat the same message."
+            false,
+            "lang:anti-spam.messages.too-fast",
+            "lang:anti-spam.messages.too-long",
+            "lang:anti-spam.messages.too-many-caps",
+            "lang:anti-spam.messages.duplicate"
         );
     }
 }

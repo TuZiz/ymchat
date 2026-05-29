@@ -6,6 +6,21 @@ import ym.ymchat.service.language.LanguageService;
 
 public final class ItemShowcaseConfigParser {
 
+    private static final String COMMAND_MESSAGE = "lang:item-showcase.command-message";
+    private static final String DISABLED_MESSAGE = "lang:item-showcase.messages.disabled";
+    private static final String ONLY_PLAYER_MESSAGE = "lang:item-showcase.messages.only-player";
+    private static final String ITEM_NO_PERMISSION = "lang:item-showcase.item.messages.no-permission";
+    private static final String ITEM_EMPTY_HAND = "lang:item-showcase.item.messages.empty-hand";
+    private static final String ITEM_COOLDOWN = "lang:item-showcase.item.messages.cooldown";
+    private static final String INVENTORY_NO_PERMISSION = "lang:item-showcase.inventory.messages.no-permission";
+    private static final String INVENTORY_EMPTY = "lang:item-showcase.inventory.messages.empty";
+    private static final String INVENTORY_COOLDOWN = "lang:item-showcase.inventory.messages.cooldown";
+    private static final String ENDER_CHEST_NO_PERMISSION = "lang:item-showcase.ender-chest.messages.no-permission";
+    private static final String ENDER_CHEST_EMPTY = "lang:item-showcase.ender-chest.messages.empty";
+    private static final String ENDER_CHEST_COOLDOWN = "lang:item-showcase.ender-chest.messages.cooldown";
+    private static final String POSITION_NO_PERMISSION = "lang:item-showcase.position.messages.no-permission";
+    private static final String POSITION_COOLDOWN = "lang:item-showcase.position.messages.cooldown";
+
     private final LanguageService languageService;
 
     public ItemShowcaseConfigParser(LanguageService languageService) {
@@ -16,12 +31,14 @@ public final class ItemShowcaseConfigParser {
         ItemShowcaseSettings defaults = ItemShowcaseSettings.defaults();
         return new ItemShowcaseSettings(
             config.getBoolean("Item-Showcase.Enabled", defaults.enabled()),
-            localizedConfigString(config, "Item-Showcase.Command-Message", defaults.commandMessage()),
-            localizedConfigString(config, "Item-Showcase.Messages.Disabled", defaults.disabledMessage()),
-            localizedConfigString(config, "Item-Showcase.Messages.Only-Player", defaults.onlyPlayerMessage()),
+            localizedConfigString(config, "Item-Showcase.Command-Message", COMMAND_MESSAGE),
+            localizedConfigString(config, "Item-Showcase.Messages.Disabled", DISABLED_MESSAGE),
+            localizedConfigString(config, "Item-Showcase.Messages.Only-Player", ONLY_PLAYER_MESSAGE),
             parseItemSection(config, defaults.item()),
-            parseSnapshotSection(config, "Item-Showcase.Inventory", defaults.inventory()),
-            parseSnapshotSection(config, "Item-Showcase.Ender-Chest", defaults.enderChest()),
+            parseSnapshotSection(config, "Item-Showcase.Inventory", defaults.inventory(), INVENTORY_NO_PERMISSION,
+                INVENTORY_EMPTY, INVENTORY_COOLDOWN),
+            parseSnapshotSection(config, "Item-Showcase.Ender-Chest", defaults.enderChest(), ENDER_CHEST_NO_PERMISSION,
+                ENDER_CHEST_EMPTY, ENDER_CHEST_COOLDOWN),
             parsePositionSection(config, "Item-Showcase.Position", defaults.position())
         );
     }
@@ -49,11 +66,11 @@ public final class ItemShowcaseConfigParser {
         String text = localizedConfigString(config, "Item-Showcase.Item.Item-Text",
             localizedConfigString(config, "Item-Showcase.Item-Text", defaults.text()));
         String noPermission = localizedConfigString(config, "Item-Showcase.Item.Messages.No-Permission",
-            localizedConfigString(config, "Item-Showcase.Messages.No-Permission", defaults.noPermissionMessage()));
+            localizedConfigString(config, "Item-Showcase.Messages.No-Permission", ITEM_NO_PERMISSION));
         String emptyMessage = localizedConfigString(config, "Item-Showcase.Item.Messages.Empty-Hand",
-            localizedConfigString(config, "Item-Showcase.Messages.Empty-Hand", defaults.emptyMessage()));
+            localizedConfigString(config, "Item-Showcase.Messages.Empty-Hand", ITEM_EMPTY_HAND));
         String cooldownMessage = localizedConfigString(config, "Item-Showcase.Item.Messages.Cooldown",
-            localizedConfigString(config, "Item-Showcase.Messages.Cooldown", defaults.cooldownMessage()));
+            localizedConfigString(config, "Item-Showcase.Messages.Cooldown", ITEM_COOLDOWN));
 
         return new ItemShowcaseSettings.ItemSection(
             config.getBoolean("Item-Showcase.Item.Enabled", defaults.enabled()),
@@ -72,7 +89,10 @@ public final class ItemShowcaseConfigParser {
     private ItemShowcaseSettings.SnapshotSection parseSnapshotSection(
         FileConfiguration config,
         String path,
-        ItemShowcaseSettings.SnapshotSection defaults
+        ItemShowcaseSettings.SnapshotSection defaults,
+        String noPermissionFallback,
+        String emptyFallback,
+        String cooldownFallback
     ) {
         List<String> tokens = config.getStringList(path + ".Tokens");
         if (tokens.isEmpty()) {
@@ -87,9 +107,9 @@ public final class ItemShowcaseConfigParser {
             config.getInt(path + ".Max-Per-Message", defaults.maxPerMessage()),
             localizedConfigString(config, path + ".Text", defaults.text()),
             localizedConfigStringList(config, path + ".Hover", defaults.hover()),
-            localizedConfigString(config, path + ".Messages.No-Permission", defaults.noPermissionMessage()),
-            localizedConfigString(config, path + ".Messages.Empty", defaults.emptyMessage()),
-            localizedConfigString(config, path + ".Messages.Cooldown", defaults.cooldownMessage())
+            localizedConfigString(config, path + ".Messages.No-Permission", noPermissionFallback),
+            localizedConfigString(config, path + ".Messages.Empty", emptyFallback),
+            localizedConfigString(config, path + ".Messages.Cooldown", cooldownFallback)
         );
     }
 
@@ -112,8 +132,8 @@ public final class ItemShowcaseConfigParser {
             localizedConfigString(config, path + ".Text", defaults.text()),
             localizedConfigStringList(config, path + ".Hover", defaults.hover()),
             localizedConfigString(config, path + ".Copy-Text", defaults.copyText()),
-            localizedConfigString(config, path + ".Messages.No-Permission", defaults.noPermissionMessage()),
-            localizedConfigString(config, path + ".Messages.Cooldown", defaults.cooldownMessage())
+            localizedConfigString(config, path + ".Messages.No-Permission", POSITION_NO_PERMISSION),
+            localizedConfigString(config, path + ".Messages.Cooldown", POSITION_COOLDOWN)
         );
     }
 

@@ -29,10 +29,15 @@ public record PublicChatHighlightSettings(
                     List.of("*"),
                     "literal",
                     "sell",
+                    List.of(),
                     false,
                     false,
                     "&#FFD166",
-                    List.of("bold")
+                    List.of("bold"),
+                    List.of(),
+                    "",
+                    "",
+                    ""
                 ),
                 new KeywordHighlightRule(
                     "urgent-word",
@@ -41,10 +46,15 @@ public record PublicChatHighlightSettings(
                     List.of("*"),
                     "regex",
                     "(urgent|help)",
+                    List.of(),
                     false,
                     false,
                     "&#FF6B6B",
-                    List.of("bold")
+                    List.of("bold"),
+                    List.of(),
+                    "",
+                    "",
+                    ""
                 )
             ),
             List.of(
@@ -54,11 +64,15 @@ public record PublicChatHighlightSettings(
                     80,
                     List.of("*"),
                     List.of(
-                        "\\b\\d+(?:\\.\\d+)?[wkWK]?\\b",
+                        "\\b\\d+(?:\\.\\d+)?[wkWK]\\b",
                         "\\b\\d+(?:\\.\\d+)?(coin|coins)\\b"
                     ),
-                    "&#F7B32B",
-                    List.of("bold")
+                    "&#D4AF37",
+                    List.of(),
+                    List.of(),
+                    "",
+                    "",
+                    ""
                 ),
                 new PatternHighlightRule(
                     "quantity",
@@ -70,7 +84,11 @@ public record PublicChatHighlightSettings(
                         "\\*\\d+"
                     ),
                     "&#4ECDC4",
-                    List.of()
+                    List.of(),
+                    List.of(),
+                    "",
+                    "",
+                    ""
                 ),
                 new PatternHighlightRule(
                     "coordinates",
@@ -82,7 +100,11 @@ public record PublicChatHighlightSettings(
                         "(?i)x\\s*:\\s*-?\\d+\\s*y\\s*:\\s*-?\\d+\\s*z\\s*:\\s*-?\\d+"
                     ),
                     "&#5DA9E9",
-                    List.of("underlined")
+                    List.of("underlined"),
+                    List.of(),
+                    "",
+                    "",
+                    ""
                 ),
                 new PatternHighlightRule(
                     "time",
@@ -94,7 +116,11 @@ public record PublicChatHighlightSettings(
                         "\\b\\d+[mhds]\\b"
                     ),
                     "&#C77DFF",
-                    List.of()
+                    List.of(),
+                    List.of(),
+                    "",
+                    "",
+                    ""
                 )
             )
         );

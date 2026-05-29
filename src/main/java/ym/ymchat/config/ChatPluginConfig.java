@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.List;
 import org.bukkit.entity.Player;
 import ym.ymchat.config.chat.AntiSpamSettings;
+import ym.ymchat.config.chat.ChannelSwitchSettings;
 import ym.ymchat.config.chat.ChatChannel;
 import ym.ymchat.config.chat.FormatRule;
 import ym.ymchat.config.chat.MentionSettings;
@@ -23,11 +24,13 @@ public record ChatPluginConfig(
     boolean debug,
     boolean showChannelDisplay,
     String defaultChannelId,
+    ChannelSwitchSettings channelSwitchSettings,
     List<ChatChannel> channels,
     CrossServerSettings crossServerSettings,
     AntiSpamSettings antiSpamSettings,
     MentionSettings mentionSettings,
     ColorChatSettings colorChatSettings,
+    ym.ymchat.config.color.FixedColorSettings nameColorSettings,
     MegaphoneSettings megaphoneSettings,
     PublicChatHighlightSettings publicChatHighlightSettings,
     ItemShowcaseSettings itemShowcaseSettings,
@@ -46,6 +49,11 @@ public record ChatPluginConfig(
         if (preferredFormatId != null && !preferredFormatId.isBlank()) {
             for (FormatRule rule : formats) {
                 if (preferredFormatId.equalsIgnoreCase(rule.id()) && rule.matches(player, channelId)) {
+                    return rule;
+                }
+            }
+            for (FormatRule rule : formats) {
+                if (preferredFormatId.equalsIgnoreCase(rule.id()) && rule.matchesCondition(player)) {
                     return rule;
                 }
             }

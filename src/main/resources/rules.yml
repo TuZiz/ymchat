@@ -1,111 +1,37 @@
-Highlights:
-  Enabled: true
-  Default-Channels:
-    - '*'
-
-  Keyword-Rules:
-    - id: market-word
-      enabled: true
-      priority: 100
-      channels:
-        - '*'
-      type: literal
-      match: '收'
-      case-sensitive: false
-      whole-word: false
-      color: '&#FFD166'
-      formats:
-        - 'bold'
-
-    - id: urgent-word
-      enabled: true
-      priority: 90
-      channels:
-        - '*'
-      type: regex
-      match: '(急收|大量|高价)'
-      case-sensitive: false
-      whole-word: false
-      color: '&#FF6B6B'
-      formats:
-        - 'bold'
-
-  Pattern-Rules:
-    price:
-      enabled: true
-      priority: 80
-      channels:
-        - '*'
-      color: '&#F7B32B'
-      formats:
-        - 'bold'
-      regexes:
-        - '\\b\\d+(?:\\.\\d+)?[wkWK]?\\b'
-        - '\\b\\d+(?:\\.\\d+)?(金币|元|点券)\\b'
-
-    quantity:
-      enabled: true
-      priority: 70
-      channels:
-        - '*'
-      color: '&#4ECDC4'
-      formats: []
-      regexes:
-        - '(?i)x\\d+'
-        - '\\b\\d+个\\b'
-        - '\\*\\d+'
-
-    coordinates:
-      enabled: true
-      priority: 60
-      channels:
-        - '*'
-      color: '&#5DA9E9'
-      formats:
-        - 'underlined'
-      regexes:
-        - '-?\\d+\\s+-?\\d+\\s+-?\\d+'
-        - '(?i)x\\s*:\\s*-?\\d+\\s*y\\s*:\\s*-?\\d+\\s*z\\s*:\\s*-?\\d+'
-
-    time:
-      enabled: true
-      priority: 50
-      channels:
-        - '*'
-      color: '&#C77DFF'
-      formats: []
-      regexes:
-        - '\\b\\d{1,2}:\\d{2}\\b'
-        - '\\b\\d+(秒|分钟|小时|天)后\\b'
-        - '\\b\\d+[mhds]\\b'
-
+# 反刷屏：冷却、长度和重复消息都在这里限制。
 Anti-Spam:
   Enabled: true
   Bypass-Permission: 'ymchat.bypass.antispam'
   Cooldown-Millis: 1500
   Max-Length: 120
-  Caps-Ratio: 0.7
   Duplicate-Window-Millis: 30000
-  Block-Duplicate: true
-  Messages:
-    Too-Fast: '&#777777[&#FFD700!&#777777] &#FFD700你说话太快了，请稍后再试。'
-    Too-Long: '&#777777[&#FFD700!&#777777] &#FFD700你的消息太长了，请精简一下。'
-    Too-Many-Caps: '&#777777[&#FFD700!&#777777] &#FFD700请不要发送过多的大写字母。'
-    Duplicate: '&#777777[&#FFD700!&#777777] &#FFD700请不要重复发送相同的消息。'
+  Block-Duplicate: false
 
+# 文本过滤：block 会拦截消息，replace 会替换匹配内容。
 Filter:
   Enabled: true
+  # 云词库格式参考:
+  # https://raw.githubusercontent.com/Yurinann/Filter-Thesaurus-Cloud/main/database.json
+  Cloud:
+    Enabled: true
+    Url: 'https://raw.githubusercontent.com/Yurinann/Filter-Thesaurus-Cloud/main/database.json'
+    Array-Path: 'words'
+    Refresh-Minutes: 60
+    Mode: block
+    Replacement: '***'
+    Bypass-Permission: 'ymchat.filter.bypass'
+    Scopes:
+      - all
+  # Local fallback rules still work when the cloud list has not finished loading
+  # or the network cannot reach GitHub. Keep player-visible messages in lang/*.yml.
   Rules:
-    - id: ad-block
+    - id: profanity-basic
       scope: all
       mode: block
-      match: '(?i)(qq|vx|discord\.gg)'
       regex: true
-      message: '&#777777[&#FF6B6B!&#777777] &#FF6B6B你的消息包含违规或被禁止的内容。'
-      bypass-permission: 'ymchat.filter.bypass'
-    - id: badword-soft
-      scope: public
-      mode: replace
-      match: 'sb'
+      case-sensitive: false
+      match: '(?iu)(?:f[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*u[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*c[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*k|s[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*h[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*i[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*t|n[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*m[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*s[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*l|c[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*n[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*m|r[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*n[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*m|s[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*b|傻[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*逼|煞[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*笔|傻[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*b|操[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*你[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*妈|草[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*你[\s\p{Punct}\p{P}\u200B\u200C\u200D\uFEFF]*妈)'
       replacement: '***'
       bypass-permission: 'ymchat.filter.bypass'
+      channels:
+        - '*'

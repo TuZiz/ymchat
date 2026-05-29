@@ -8,7 +8,8 @@ public record MentionSettings(
     boolean notifyActionbar,
     boolean allowEveryone,
     String everyonePermission,
-    String everyoneToken
+    String everyoneToken,
+    boolean matchPlainNames
 ) {
 
     public static MentionSettings defaults() {
@@ -20,7 +21,8 @@ public record MentionSettings(
             true,
             true,
             "ymchat.mention.everyone",
-            "all"
+            "all",
+            true
         );
     }
 }

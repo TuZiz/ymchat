@@ -19,6 +19,10 @@ public record FormatRule(
         return matchesChannel(channelId) && ConditionEvaluator.evaluate(player, condition);
     }
 
+    public boolean matchesCondition(Player player) {
+        return ConditionEvaluator.evaluate(player, condition);
+    }
+
     public boolean matchesChannel(String channelId) {
         return channel == null || channel.isBlank() || "~".equals(channel) || channel.equalsIgnoreCase(channelId);
     }

@@ -1,0 +1,265 @@
+# ========================================================= #
+#                    公屏高亮系统 (Highlights)                #
+# ========================================================= #
+# 独立开关，false 时不处理任何关键词或正则高亮。
+Highlights:
+  Enabled: true
+
+  Default-Channels:
+    - '*'
+
+  # ========================================================= #
+  # 关键词规则 (Keyword-Rules)                                #
+  # ========================================================= #
+  Keyword-Rules:
+
+    # 1. 玩家收购/求购信息
+    - id: market-buy
+      enabled: true
+      priority: 120
+      channels:
+        - '*'
+      type: regex
+      matches:
+        - '(收购|求购|高价收|无限收|带价收)\s*[^\s]+'
+        - '(求买|想买|带价来)\s*[^\s]+'
+      case-sensitive: false
+      whole-word: false
+      color: '&#F59E0B'  # 琥珀黄 (Amber)
+      formats:
+        - 'bold'
+      hover:
+        - '&#B0B0B0点击私聊对方并发送收购回复'
+      suggest: '/msg %player_name% 老板你好，我手上有你要收的 '
+
+    # 2. 玩家出售/甩卖信息
+    - id: market-sell
+      enabled: true
+      priority: 115
+      channels:
+        - '*'
+      type: regex
+      matches:
+        - '(出售|卖出|甩卖|清仓|低价出)\s*[^\s]+'
+      case-sensitive: false
+      whole-word: false
+      color: '&#10B981'  # 翠绿色 (Emerald)
+      formats:
+        - 'bold'
+      hover:
+        - '&#B0B0B0点击私聊对方并发送购买回复'
+      suggest: '/msg %player_name% 老板你好，我想购买你出售的 '
+
+    # 3. 以物易物/交换信息
+    - id: market-trade
+      enabled: true
+      priority: 110
+      channels:
+        - '*'
+      type: regex
+      matches:
+        - '(交换|互换|以物易物)\s*[^\s]+'
+      case-sensitive: false
+      whole-word: false
+      color: '&#0EA5E9'  # 天蓝色 (Sky)
+      formats:
+        - 'bold'
+      hover:
+        - '&#B0B0B0点击私聊对方并发送交换回复'
+      suggest: '/msg %player_name% 你好，我想用 [我的物品] 换你的 '
+
+    # 4. 求助求救信息
+    - id: help-word
+      enabled: true
+      priority: 105
+      channels:
+        - '*'
+      type: regex
+      matches:
+        - '(求助|帮忙|救命|来人|卡住了|怎么做|怎么弄|求解)'
+      case-sensitive: false
+      whole-word: false
+      color: '&#EF4444'  # 警示红 (Red)
+      formats:
+        - 'bold'
+      hover:
+        - '&#B0B0B0点击私聊对方并发送帮助回复'
+      suggest: '/msg %player_name% 稳住别慌，现在情况怎么样？'
+
+    # 5. 组队打本信息
+    - id: team-word
+      enabled: true
+      priority: 95
+      channels:
+        - '*'
+      type: regex
+      matches:
+        - '(组队|缺人|副本|来打|一起|上车|开组|几等一)'
+      case-sensitive: false
+      whole-word: false
+      color: '&#A855F7'  # 梦幻紫 (Purple)
+      formats:
+        - 'bold'
+      hover:
+        - '&#B0B0B0点击私聊对方并发送组队回复'
+      suggest: '/msg %player_name% 组队求拉！算我一个，麻烦组我一下。'
+
+    # 6. 公会/家族招募
+    - id: guild-word
+      enabled: true
+      priority: 90
+      channels:
+        - '*'
+      type: regex
+      matches:
+        - '(招人|收人|家族|公会|小镇|聚落)'
+      case-sensitive: false
+      whole-word: false
+      color: '&#F43F5E'  # 玫瑰红 (Rose)
+      formats:
+        - 'bold'
+      hover:
+        - '&#B0B0B0点击私聊对方了解详情'
+      suggest: '/msg %player_name% 你好，我对你们的公会/小镇感兴趣，请问还有位置吗？'
+
+    # 7. 迎新/活跃气氛
+    - id: welcome-word
+      enabled: true
+      priority: 85
+      channels:
+        - '*'
+      type: regex
+      matches:
+        - '(欢迎|萌新|大佬|新手)'
+      case-sensitive: false
+      whole-word: false
+      color: '&#EC4899'  # 粉色 (Pink)
+      formats: []
+
+    # 8. 安全预警敏感词
+    - id: warning-word
+      enabled: true
+      priority: 150
+      channels:
+        - '*'
+      type: regex
+      matches:
+        - '(骗子|骗钱|盗号|熊孩子|毁档|开挂|作弊)'
+      case-sensitive: false
+      whole-word: false
+      color: '&#DC2626'  # 深红色预警
+      formats:
+        - 'bold'
+        - 'underlined'
+      hover:
+        - '&#FCA5A5谨慎交易，注意核实对方信息'
+
+
+  # ========================================================= #
+  # 模式匹配规则 (Pattern-Rules)                                #
+  # ========================================================= #
+  Pattern-Rules:
+
+    # A. 价格与货币
+    price:
+      enabled: true
+      priority: 80
+      channels:
+        - '*'
+      color: '&#D4AF37'  # 柔和金色
+      formats: []
+      hover:
+        - '&#B0B0B0点击复制整条消息'
+      copy: '%message%'
+      regexes:
+        - '\b\d+(?:\.\d+)?[kKmMwW]\b'
+        - '\b\d+(?:\.\d+)?(金币|元|点券|万|千|块)\b'
+
+    # B. 物品数量
+    quantity:
+      enabled: true
+      priority: 70
+      channels:
+        - '*'
+      color: '&#38BDF8'  # 青蓝色
+      formats: []
+      hover: []
+      regexes:
+        - '(?i)x\d+'
+        - '\b\d+个\b'
+        - '\b\d+组\b'
+        - '(一组|半组|满组)'
+        - '\*\d+'
+
+    # C. 地图坐标 (X Y Z)
+    coordinates:
+      enabled: true
+      priority: 60
+      channels:
+        - '*'
+      color: '&#34D399'  # 导航绿
+      formats:
+        - 'underlined'
+      hover:
+        - '&#B0B0B0点击复制整条消息'
+      copy: '%message%'
+      regexes:
+        - '(坐标|位置|pos)\s*[:：]?\s*-?\d+\s+-?\d+\s+-?\d+'
+        - '-?\d{2,6}\s+-?\d{1,4}\s+-?\d{2,6}'
+        - '(?i)x\s*:\s*-?\d+\s*y\s*:\s*-?\d+\s*z\s*:\s*-?\d+'
+
+    # D. 时间格式
+    time:
+      enabled: true
+      priority: 50
+      channels:
+        - '*'
+      color: '&#C084FC'  # 浅紫色
+      formats: []
+      hover: []
+      regexes:
+        - '\b\d{1,2}:\d{2}\b'
+        - '\b\d+(秒|分钟|小时|天)后\b'
+        - '\b\d+[mhds]\b'
+
+    # E. 提及玩家
+    mention-player:
+      enabled: false
+      priority: 130
+      channels:
+        - '*'
+      color: '&#FDE047'  # 明黄色
+      formats:
+        - 'italic'
+      hover: []
+      regexes:
+        - '@[a-zA-Z0-9_]{3,16}'
+
+    # F. 社交联系方式
+    social-links:
+      enabled: true
+      priority: 40
+      channels:
+        - '*'
+      color: '&#60A5FA'  # 链接蓝
+      formats:
+        - 'underlined'
+      hover:
+        - '&#B0B0B0点击复制整条消息'
+      copy: '%message%'
+      regexes:
+        - '(?:QQ|群|q群|群号)\s*:?\s*\d{5,11}'
+        - '(https?:\/\/[^\s]+)'
+
+    # G. RPG 装备品质词缀
+    rpg-rarity:
+      enabled: true
+      priority: 45
+      channels:
+        - '*'
+      color: '&#F59E0B'  # 传说金
+      formats:
+        - 'bold'
+      hover: []
+      regexes:
+        - '(传说|史诗|神话|稀有|罕见)'

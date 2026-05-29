@@ -11,7 +11,8 @@ import ym.ymchat.config.color.FixedColorSettings;
 
 public final class PlayerColorService {
 
-    public static final String USE_PERMISSION = "ymchat.color.use";
+    public static final String USE_PERMISSION = ColorScope.CHAT.usePermission();
+    public static final String NAME_USE_PERMISSION = ColorScope.NAME.usePermission();
 
     private final PlayerColorPreferenceRepository repository;
 
@@ -20,21 +21,50 @@ public final class PlayerColorService {
     }
 
     public ResolvedColor resolve(Player player, ColorChatSettings settings, String ruleDefaultColor) {
-        return resolve(player.getUniqueId(), permission -> hasRuntimePermission(player, permission), settings, ruleDefaultColor);
+        return resolve(player, ColorScope.CHAT, settings == null ? null : settings.fixedSettings(), ruleDefaultColor);
     }
 
-    public ResolvedColor resolve(UUID playerId, Predicate<String> permissionChecker, ColorChatSettings settings, String ruleDefaultColor) {
+    public ResolvedColor resolve(Player player, ColorScope scope, FixedColorSettings settings, String ruleDefaultColor) {
+        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
+        return resolve(
+            player.getUniqueId(),
+            permission -> hasRuntimePermission(player, permission),
+            effectiveScope,
+            settings,
+            ruleDefaultColor
+        );
+    }
+
+    public ResolvedColor resolve(
+        UUID playerId,
+        Predicate<String> permissionChecker,
+        ColorChatSettings settings,
+        String ruleDefaultColor
+    ) {
+        return resolve(
+            playerId,
+            permissionChecker,
+            ColorScope.CHAT,
+            settings == null ? null : settings.fixedSettings(),
+            ruleDefaultColor
+        );
+    }
+
+    public ResolvedColor resolve(
+        UUID playerId,
+        Predicate<String> permissionChecker,
+        ColorScope scope,
+        FixedColorSettings settings,
+        String ruleDefaultColor
+    ) {
+        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
         String fallbackColor = firstValidColor(ruleDefaultColor, "&f");
-        if (settings == null) {
-            return new ResolvedColor(fallbackColor, ColorSource.RULE_DEFAULT, null, null);
+        PlayerColorPreference storedPreference = repository.get(playerId, effectiveScope);
+        if (settings == null || !settings.enabled()) {
+            return new ResolvedColor(fallbackColor, ColorSource.RULE_DEFAULT, storedPreference, null);
         }
 
-        FixedColorSettings fixedSettings = settings.fixedSettings();
-        if (fixedSettings == null || !fixedSettings.enabled()) {
-            return new ResolvedColor(fallbackColor, ColorSource.RULE_DEFAULT, repository.get(playerId), null);
-        }
-
-        PlayerColorPreference preference = migrateLegacyPreset(playerId, repository.get(playerId), fixedSettings);
+        PlayerColorPreference preference = mapLegacyPreset(storedPreference, settings);
         if (preference != null) {
             switch (preference.mode()) {
                 case OFF -> {
@@ -42,21 +72,21 @@ public final class PlayerColorService {
                 }
                 case LEGACY -> {
                     String code = normalizeLegacyCode(preference.value());
-                    if (code != null && hasPermission(permissionChecker, legacyPermission(code))) {
+                    if (code != null && hasPermission(permissionChecker, legacyPermission(effectiveScope, code))) {
                         return new ResolvedColor("&" + code, ColorSource.MANUAL_LEGACY, preference, null);
                     }
-                    repository.remove(playerId);
+                    return new ResolvedColor(fallbackColor, ColorSource.RULE_DEFAULT, preference, null);
                 }
                 case RGB -> {
-                    ColorPreset rgbColor = fixedSettings.findRgbColor(preference.value());
+                    ColorPreset rgbColor = settings.findRgbColor(preference.value());
                     if (rgbColor != null && hasPermission(permissionChecker, rgbColor.permission())) {
                         String color = firstValidColor(rgbColor.value(), fallbackColor);
                         return new ResolvedColor(color, ColorSource.MANUAL_RGB, preference, rgbColor);
                     }
-                    repository.remove(playerId);
+                    return new ResolvedColor(fallbackColor, ColorSource.RULE_DEFAULT, preference, null);
                 }
                 case PRESET -> {
-                    repository.remove(playerId);
+                    return new ResolvedColor(fallbackColor, ColorSource.RULE_DEFAULT, preference, null);
                 }
             }
         }
@@ -65,69 +95,110 @@ public final class PlayerColorService {
     }
 
     public List<String> availableLegacyCodes(Player player, ColorChatSettings settings) {
-        if (!canUseCommands(player, settings)) {
+        return availableLegacyCodes(player, ColorScope.CHAT, settings == null ? null : settings.fixedSettings());
+    }
+
+    public List<String> availableLegacyCodes(Player player, ColorScope scope, FixedColorSettings settings) {
+        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
+        if (!canUseCommands(player, effectiveScope, settings)) {
             return List.of();
         }
         return LEGACY_CODES.stream()
-            .filter(code -> hasRuntimePermission(player, legacyPermission(code)))
+            .filter(code -> hasRuntimePermission(player, legacyPermission(effectiveScope, code)))
             .toList();
     }
 
     public List<ColorPreset> availableRgbColors(Player player, ColorChatSettings settings) {
-        if (!canUseCommands(player, settings) || settings == null || settings.fixedSettings() == null) {
+        return availableRgbColors(player, ColorScope.CHAT, settings == null ? null : settings.fixedSettings());
+    }
+
+    public List<ColorPreset> availableRgbColors(Player player, ColorScope scope, FixedColorSettings settings) {
+        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
+        if (!canUseCommands(player, effectiveScope, settings)) {
             return List.of();
         }
-        return settings.fixedSettings().rgbColors().stream()
+        return settings.rgbColors().stream()
             .filter(color -> hasRuntimePermission(player, color.permission()))
             .toList();
     }
 
     public boolean canUseCommands(Player player, ColorChatSettings settings) {
-        FixedColorSettings fixedSettings = settings == null ? null : settings.fixedSettings();
-        return fixedSettings != null
-            && fixedSettings.enabled()
-            && hasRuntimePermission(player, USE_PERMISSION);
+        return canUseCommands(player, ColorScope.CHAT, settings == null ? null : settings.fixedSettings());
+    }
+
+    public boolean canUseCommands(Player player, ColorScope scope, FixedColorSettings settings) {
+        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
+        return settings != null
+            && settings.enabled()
+            && hasRuntimePermission(player, effectiveScope.usePermission());
     }
 
     public boolean setLegacy(Player player, ColorChatSettings settings, String code) {
-        if (!canUseCommands(player, settings)) {
+        return setLegacy(player, ColorScope.CHAT, settings == null ? null : settings.fixedSettings(), code);
+    }
+
+    public boolean setLegacy(Player player, ColorScope scope, FixedColorSettings settings, String code) {
+        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
+        if (!canUseCommands(player, effectiveScope, settings)) {
             return false;
         }
         String normalized = normalizeLegacyCode(code);
-        if (normalized == null || !hasRuntimePermission(player, legacyPermission(normalized))) {
+        if (normalized == null || !hasRuntimePermission(player, legacyPermission(effectiveScope, normalized))) {
             return false;
         }
-        repository.save(player.getUniqueId(), PlayerColorPreference.legacy(normalized));
+        repository.save(player.getUniqueId(), effectiveScope, PlayerColorPreference.legacy(normalized));
         return true;
     }
 
     public boolean setRgb(Player player, ColorChatSettings settings, String rgbId) {
-        if (!canUseCommands(player, settings) || settings == null || settings.fixedSettings() == null) {
+        return setRgb(player, ColorScope.CHAT, settings == null ? null : settings.fixedSettings(), rgbId);
+    }
+
+    public boolean setRgb(Player player, ColorScope scope, FixedColorSettings settings, String rgbId) {
+        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
+        if (!canUseCommands(player, effectiveScope, settings)) {
             return false;
         }
-        ColorPreset rgbColor = settings.fixedSettings().findRgbColor(rgbId);
+        ColorPreset rgbColor = settings.findRgbColor(rgbId);
         if (rgbColor == null || !hasRuntimePermission(player, rgbColor.permission())) {
             return false;
         }
-        repository.save(player.getUniqueId(), PlayerColorPreference.rgb(rgbColor.id()));
+        repository.save(player.getUniqueId(), effectiveScope, PlayerColorPreference.rgb(rgbColor.id()));
         return true;
     }
 
     public void setOff(Player player) {
-        repository.save(player.getUniqueId(), PlayerColorPreference.off());
+        setOff(player, ColorScope.CHAT);
+    }
+
+    public void setOff(Player player, ColorScope scope) {
+        repository.save(player.getUniqueId(), scope == null ? ColorScope.CHAT : scope, PlayerColorPreference.off());
     }
 
     public void reset(Player player) {
-        repository.remove(player.getUniqueId());
+        reset(player, ColorScope.CHAT);
+    }
+
+    public void reset(Player player, ColorScope scope) {
+        repository.remove(player.getUniqueId(), scope == null ? ColorScope.CHAT : scope);
     }
 
     public String currentStoredValue(Player player) {
-        PlayerColorPreference preference = repository.get(player.getUniqueId());
+        return currentStoredValue(player, ColorScope.CHAT);
+    }
+
+    public String currentStoredValue(Player player, ColorScope scope) {
+        PlayerColorPreference preference = repository.get(player.getUniqueId(), scope == null ? ColorScope.CHAT : scope);
         return preference == null ? "" : preference.value();
     }
 
     public static String legacyPermission(String code) {
-        return "ymchat.color." + code.toLowerCase(Locale.ROOT);
+        return legacyPermission(ColorScope.CHAT, code);
+    }
+
+    public static String legacyPermission(ColorScope scope, String code) {
+        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
+        return effectiveScope.legacyPermission(code);
     }
 
     public static String normalizeLegacyCode(String input) {
@@ -141,12 +212,12 @@ public final class PlayerColorService {
         return LEGACY_CODES.contains(value) ? value : null;
     }
 
-    private PlayerColorPreference migrateLegacyPreset(UUID playerId, PlayerColorPreference preference, FixedColorSettings settings) {
+    private PlayerColorPreference mapLegacyPreset(PlayerColorPreference preference, FixedColorSettings settings) {
         if (preference == null || preference.mode() != PlayerColorPreference.Mode.PRESET) {
             return preference;
         }
 
-        PlayerColorPreference migrated = switch (preference.value().toLowerCase(Locale.ROOT)) {
+        return switch (preference.value().toLowerCase(Locale.ROOT)) {
             case "yellow" -> PlayerColorPreference.legacy("e");
             case "green" -> PlayerColorPreference.legacy("a");
             case "aqua" -> PlayerColorPreference.legacy("b");
@@ -154,13 +225,6 @@ public final class PlayerColorService {
             case "pink" -> settings.findRgbColor("pink") == null ? PlayerColorPreference.off() : PlayerColorPreference.rgb("pink");
             default -> PlayerColorPreference.off();
         };
-
-        if (migrated.mode() == PlayerColorPreference.Mode.OFF) {
-            repository.remove(playerId);
-            return null;
-        }
-        repository.save(playerId, migrated);
-        return migrated;
     }
 
     private boolean hasPermission(Predicate<String> permissionChecker, String permission) {
@@ -174,7 +238,8 @@ public final class PlayerColorService {
         if (player.hasPermission(permission)) {
             return true;
         }
-        return player.isOp() && permission.toLowerCase(Locale.ROOT).startsWith("ymchat.color.");
+        String lowered = permission.toLowerCase(Locale.ROOT);
+        return player.isOp() && (lowered.startsWith("ymchat.color.") || lowered.startsWith("ymchat.namecolor."));
     }
 
     private String firstValidColor(String primary, String fallback) {

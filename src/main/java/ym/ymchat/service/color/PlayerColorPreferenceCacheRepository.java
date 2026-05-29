@@ -12,8 +12,8 @@ import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import ym.ymchat.YmChatPlugin;
-
 import ym.ymchat.service.crossserver.CrossServerChatService;
+
 public final class PlayerColorPreferenceCacheRepository implements PlayerColorPreferenceRepository {
 
     private final PlayerColorPreferencePersistenceBackend localBackend;
@@ -21,8 +21,8 @@ public final class PlayerColorPreferenceCacheRepository implements PlayerColorPr
     private final Executor asyncExecutor;
     private final Logger logger;
     private final Function<UUID, Player> playerLookup;
-    private final Map<UUID, CachedPreferenceState> states = new ConcurrentHashMap<>();
-    private final Map<UUID, Object> playerLocks = new ConcurrentHashMap<>();
+    private final Map<CacheKey, CachedPreferenceState> states = new ConcurrentHashMap<>();
+    private final Map<CacheKey, Object> playerLocks = new ConcurrentHashMap<>();
     private final AtomicLong mutationSequence = new AtomicLong();
     private final AtomicLong bindingGeneration = new AtomicLong();
     private volatile StorageMode storageMode = StorageMode.LOCAL;
@@ -65,69 +65,95 @@ public final class PlayerColorPreferenceCacheRepository implements PlayerColorPr
         if (playerId == null) {
             return;
         }
+        for (ColorScope scope : ColorScope.values()) {
+            preload(playerId, scope);
+        }
+    }
+
+    public void preload(UUID playerId, ColorScope scope) {
+        if (playerId == null) {
+            return;
+        }
+        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
         StorageMode mode = storageMode;
         long generation = bindingGeneration.get();
-        long expectedVersion = currentVersion(playerId);
-        asyncExecutor.execute(() -> preloadBlocking(playerId, mode, generation, expectedVersion));
+        long expectedVersion = currentVersion(playerId, effectiveScope);
+        asyncExecutor.execute(() -> preloadBlocking(playerId, effectiveScope, mode, generation, expectedVersion));
     }
 
     public void preloadBlocking(UUID playerId) {
         if (playerId == null) {
             return;
         }
-        preloadBlocking(playerId, storageMode, bindingGeneration.get(), currentVersion(playerId));
+        for (ColorScope scope : ColorScope.values()) {
+            preloadBlocking(playerId, scope);
+        }
+    }
+
+    public void preloadBlocking(UUID playerId, ColorScope scope) {
+        if (playerId == null) {
+            return;
+        }
+        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
+        preloadBlocking(playerId, effectiveScope, storageMode, bindingGeneration.get(), currentVersion(playerId, effectiveScope));
     }
 
     public void clearRuntime(UUID playerId) {
         if (playerId == null) {
             return;
         }
-        states.computeIfPresent(playerId, (ignored, state) -> state.withPreference(null));
+        for (ColorScope scope : ColorScope.values()) {
+            CacheKey key = new CacheKey(playerId, scope);
+            states.computeIfPresent(key, (ignored, state) -> state.withPreference(null));
+        }
     }
 
     @Override
-    public PlayerColorPreference get(UUID playerId) {
-        CachedPreferenceState state = states.get(playerId);
+    public PlayerColorPreference get(UUID playerId, ColorScope scope) {
+        CachedPreferenceState state = states.get(new CacheKey(playerId, scope == null ? ColorScope.CHAT : scope));
         return state == null ? null : state.preference();
     }
 
     @Override
-    public void save(UUID playerId, PlayerColorPreference preference) {
+    public void save(UUID playerId, ColorScope scope, PlayerColorPreference preference) {
         if (playerId == null || preference == null) {
             return;
         }
+        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
+        CacheKey key = new CacheKey(playerId, effectiveScope);
         StorageMode mode = storageMode;
         long generation = bindingGeneration.get();
         long version = mutationSequence.incrementAndGet();
-        states.put(playerId, new CachedPreferenceState(version, preference, mode == StorageMode.CROSS_SERVER));
-        if (mode == StorageMode.LOCAL) {
-            persistLocalSave(playerId, preference, generation, version);
-            return;
-        }
-        asyncExecutor.execute(() -> persistCrossServerSave(playerId, preference, generation, version));
+        states.put(key, new CachedPreferenceState(version, preference, true));
+        asyncExecutor.execute(() -> persistSave(key, preference, mode, generation, version));
     }
 
     @Override
-    public void remove(UUID playerId) {
+    public void remove(UUID playerId, ColorScope scope) {
         if (playerId == null) {
             return;
         }
+        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
+        CacheKey key = new CacheKey(playerId, effectiveScope);
         StorageMode mode = storageMode;
         long generation = bindingGeneration.get();
         long version = mutationSequence.incrementAndGet();
-        states.put(playerId, new CachedPreferenceState(version, null, mode == StorageMode.CROSS_SERVER));
-        if (mode == StorageMode.LOCAL) {
-            persistLocalRemove(playerId, generation, version);
-            return;
-        }
-        asyncExecutor.execute(() -> persistCrossServerRemove(playerId, generation, version));
+        states.put(key, new CachedPreferenceState(version, null, true));
+        asyncExecutor.execute(() -> persistRemove(key, mode, generation, version));
     }
 
-    private void preloadBlocking(UUID playerId, StorageMode mode, long generation, long expectedVersion) {
+    private void preloadBlocking(
+        UUID playerId,
+        ColorScope scope,
+        StorageMode mode,
+        long generation,
+        long expectedVersion
+    ) {
         PlayerColorPreferencePersistenceBackend backend = backend(mode);
+        CacheKey key = new CacheKey(playerId, scope);
         try {
-            PlayerColorPreference preference = backend.load(playerId);
-            states.compute(playerId, (ignored, current) -> {
+            PlayerColorPreference preference = backend.load(playerId, scope);
+            states.compute(key, (ignored, current) -> {
                 if (generation != bindingGeneration.get()) {
                     return current;
                 }
@@ -141,71 +167,53 @@ public final class PlayerColorPreferenceCacheRepository implements PlayerColorPr
             if (generation == bindingGeneration.get()) {
                 logger.log(
                     Level.WARNING,
-                    "Failed to preload player color preference from " + backend.description()
+                    "Failed to preload player " + scope.storageKey() + " color preference from " + backend.description()
                         + " for " + playerId + ": " + exception.getMessage()
                 );
             }
         }
     }
 
-    private void persistLocalSave(UUID playerId, PlayerColorPreference preference, long generation, long version) {
-        if (!isCurrent(playerId, generation, version, StorageMode.LOCAL, false)) {
-            return;
-        }
-        try {
-            localBackend.save(playerId, preference);
-        } catch (RuntimeException exception) {
-            throw exception;
-        } catch (Exception exception) {
-            throw new IllegalStateException("Failed to save player color preference to " + localBackend.description(), exception);
-        }
-    }
-
-    private void persistLocalRemove(UUID playerId, long generation, long version) {
-        if (!isCurrent(playerId, generation, version, StorageMode.LOCAL, false)) {
-            return;
-        }
-        try {
-            localBackend.remove(playerId);
-        } catch (RuntimeException exception) {
-            throw exception;
-        } catch (Exception exception) {
-            throw new IllegalStateException("Failed to remove player color preference from " + localBackend.description(), exception);
-        }
-    }
-
-    private void persistCrossServerSave(UUID playerId, PlayerColorPreference preference, long generation, long version) {
-        synchronized (lockFor(playerId)) {
-            if (!isCurrent(playerId, generation, version, StorageMode.CROSS_SERVER, true)) {
+    private void persistSave(
+        CacheKey key,
+        PlayerColorPreference preference,
+        StorageMode mode,
+        long generation,
+        long version
+    ) {
+        PlayerColorPreferencePersistenceBackend backend = backend(mode);
+        synchronized (lockFor(key)) {
+            if (!isCurrent(key, generation, version, mode, true)) {
                 return;
             }
             try {
-                crossServerBackend.save(playerId, preference);
+                backend.save(key.playerId(), key.scope(), preference);
             } catch (Exception exception) {
-                logAsyncFailure("save", crossServerBackend, playerId, generation, version, exception);
+                logAsyncFailure("save", backend, key, generation, version, mode, exception);
                 return;
             }
         }
-        markPersisted(playerId, preference, generation, version);
+        markPersisted(key, preference, generation, version);
     }
 
-    private void persistCrossServerRemove(UUID playerId, long generation, long version) {
-        synchronized (lockFor(playerId)) {
-            if (!isCurrent(playerId, generation, version, StorageMode.CROSS_SERVER, true)) {
+    private void persistRemove(CacheKey key, StorageMode mode, long generation, long version) {
+        PlayerColorPreferencePersistenceBackend backend = backend(mode);
+        synchronized (lockFor(key)) {
+            if (!isCurrent(key, generation, version, mode, true)) {
                 return;
             }
             try {
-                crossServerBackend.remove(playerId);
+                backend.remove(key.playerId(), key.scope());
             } catch (Exception exception) {
-                logAsyncFailure("remove", crossServerBackend, playerId, generation, version, exception);
+                logAsyncFailure("remove", backend, key, generation, version, mode, exception);
                 return;
             }
         }
-        markPersisted(playerId, null, generation, version);
+        markPersisted(key, null, generation, version);
     }
 
-    private void markPersisted(UUID playerId, PlayerColorPreference preference, long generation, long version) {
-        states.compute(playerId, (ignored, current) -> {
+    private void markPersisted(CacheKey key, PlayerColorPreference preference, long generation, long version) {
+        states.compute(key, (ignored, current) -> {
             if (generation != bindingGeneration.get()) {
                 return current;
             }
@@ -213,7 +221,7 @@ public final class PlayerColorPreferenceCacheRepository implements PlayerColorPr
                 return current;
             }
             PlayerColorPreference effectivePreference = current.preference();
-            Player player = playerLookup.apply(playerId);
+            Player player = playerLookup.apply(key.playerId());
             if (player != null && player.isOnline()) {
                 effectivePreference = preference;
             }
@@ -221,27 +229,34 @@ public final class PlayerColorPreferenceCacheRepository implements PlayerColorPr
         });
     }
 
-    private boolean isCurrent(UUID playerId, long generation, long version, StorageMode expectedMode, boolean expectedDirty) {
+    private boolean isCurrent(
+        CacheKey key,
+        long generation,
+        long version,
+        StorageMode expectedMode,
+        boolean expectedDirty
+    ) {
         if (generation != bindingGeneration.get() || storageMode != expectedMode) {
             return false;
         }
-        CachedPreferenceState state = states.get(playerId);
+        CachedPreferenceState state = states.get(key);
         return state != null && state.version() == version && state.dirty() == expectedDirty;
     }
 
     private void logAsyncFailure(
         String action,
         PlayerColorPreferencePersistenceBackend backend,
-        UUID playerId,
+        CacheKey key,
         long generation,
         long version,
+        StorageMode mode,
         Exception exception
     ) {
-        if (isCurrent(playerId, generation, version, StorageMode.CROSS_SERVER, true)) {
+        if (isCurrent(key, generation, version, mode, true)) {
             logger.log(
                 Level.WARNING,
-                "Failed to " + action + " player color preference in " + backend.description()
-                    + " for " + playerId + ": " + exception.getMessage()
+                "Failed to " + action + " player " + key.scope().storageKey() + " color preference in "
+                    + backend.description() + " for " + key.playerId() + ": " + exception.getMessage()
             );
         }
     }
@@ -250,8 +265,8 @@ public final class PlayerColorPreferenceCacheRepository implements PlayerColorPr
         return mode == StorageMode.CROSS_SERVER ? crossServerBackend : localBackend;
     }
 
-    private long currentVersion(UUID playerId) {
-        CachedPreferenceState state = states.get(playerId);
+    private long currentVersion(UUID playerId, ColorScope scope) {
+        CachedPreferenceState state = states.get(new CacheKey(playerId, scope));
         return state == null ? 0L : state.version();
     }
 
@@ -262,13 +277,20 @@ public final class PlayerColorPreferenceCacheRepository implements PlayerColorPr
         return new CachedPreferenceState(version, preference, dirty);
     }
 
-    private Object lockFor(UUID playerId) {
-        return playerLocks.computeIfAbsent(playerId, ignored -> new Object());
+    private Object lockFor(CacheKey key) {
+        return playerLocks.computeIfAbsent(key, ignored -> new Object());
     }
 
     private enum StorageMode {
         LOCAL,
         CROSS_SERVER
+    }
+
+    private record CacheKey(UUID playerId, ColorScope scope) {
+
+        private CacheKey {
+            scope = scope == null ? ColorScope.CHAT : scope;
+        }
     }
 
     private record CachedPreferenceState(long version, PlayerColorPreference preference, boolean dirty) {
@@ -287,18 +309,18 @@ public final class PlayerColorPreferenceCacheRepository implements PlayerColorPr
         }
 
         @Override
-        public PlayerColorPreference load(UUID playerId) {
-            return repository.get(playerId);
+        public PlayerColorPreference load(UUID playerId, ColorScope scope) {
+            return repository.get(playerId, scope);
         }
 
         @Override
-        public void save(UUID playerId, PlayerColorPreference preference) {
-            repository.save(playerId, preference);
+        public void save(UUID playerId, ColorScope scope, PlayerColorPreference preference) {
+            repository.save(playerId, scope, preference);
         }
 
         @Override
-        public void remove(UUID playerId) {
-            repository.remove(playerId);
+        public void remove(UUID playerId, ColorScope scope) {
+            repository.remove(playerId, scope);
         }
 
         @Override
@@ -316,18 +338,18 @@ public final class PlayerColorPreferenceCacheRepository implements PlayerColorPr
         }
 
         @Override
-        public PlayerColorPreference load(UUID playerId) throws Exception {
-            return service.findPlayerColorPreference(playerId);
+        public PlayerColorPreference load(UUID playerId, ColorScope scope) throws Exception {
+            return service.findPlayerColorPreference(playerId, scope);
         }
 
         @Override
-        public void save(UUID playerId, PlayerColorPreference preference) throws Exception {
-            service.savePlayerColorPreference(playerId, preference);
+        public void save(UUID playerId, ColorScope scope, PlayerColorPreference preference) throws Exception {
+            service.savePlayerColorPreference(playerId, scope, preference);
         }
 
         @Override
-        public void remove(UUID playerId) throws Exception {
-            service.removePlayerColorPreference(playerId);
+        public void remove(UUID playerId, ColorScope scope) throws Exception {
+            service.removePlayerColorPreference(playerId, scope);
         }
 
         @Override

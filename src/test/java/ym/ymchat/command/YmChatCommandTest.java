@@ -18,6 +18,7 @@ class YmChatCommandTest {
         assertTrue(completions.contains("reload"));
         assertTrue(completions.contains("logs"));
         assertTrue(completions.contains("megaphone"));
+        assertTrue(completions.contains("namecolor"));
         assertFalse(completions.contains("\u91cd\u8f7d"));
     }
 

@@ -33,11 +33,19 @@ public final class ChannelService {
     }
 
     public String switchChannel(Player player, String requestedChannel) {
-        ChatChannel channel = accessor.chatConfig().findChannel(requestedChannel);
+        ChatPluginConfig config = accessor.chatConfig();
+        ChatChannel channel = config.findChannel(requestedChannel);
         if (channel == null) {
             return languageService.get("service.channel.unknown", "channel", requestedChannel);
         }
         if (!channel.canUse(player)) {
+            return languageService.get("service.channel.no-permission", "channel", commandLabel(channel));
+        }
+        boolean admin = player.hasPermission(config.channelSwitchSettings().adminPermission());
+        if (!config.channelSwitchSettings().enabled() && !admin) {
+            return languageService.get("service.channel.switch-disabled");
+        }
+        if (!config.channelSwitchSettings().canSwitch(admin, channel)) {
             return languageService.get("service.channel.no-permission", "channel", commandLabel(channel));
         }
         activeChannels.put(player.getUniqueId(), channel.id());
@@ -45,8 +53,11 @@ public final class ChannelService {
     }
 
     public List<String> availableChannelIds(Player player) {
-        return accessor.chatConfig().channels().stream()
+        ChatPluginConfig config = accessor.chatConfig();
+        boolean admin = player.hasPermission(config.channelSwitchSettings().adminPermission());
+        return config.channels().stream()
             .filter(channel -> channel.canUse(player))
+            .filter(channel -> config.channelSwitchSettings().canSwitch(admin, channel))
             .map(this::commandLabel)
             .toList();
     }
