@@ -264,6 +264,14 @@ class LocalizationResourceTest {
     }
 
     @Test
+    void defaultResourcesDoNotShipRuntimePlayerColorData() {
+        Path playerColors = RESOURCES.resolve("player-colors.yml");
+
+        assertTrue(!Files.exists(playerColors),
+            "player-colors.yml is runtime data and must not be bundled as a default resource");
+    }
+
+    @Test
     void defaultResourcesDoNotShipTradeChannel() throws IOException {
         Path tradeChannel = RESOURCES.resolve("channels/trade.yml");
         List<String> references = new ArrayList<>();
