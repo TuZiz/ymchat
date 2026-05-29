@@ -33,6 +33,7 @@ class LocalizationResourceTest {
         "channel",
         "debug",
         "color",
+        "namecolor",
         "code",
         "preset",
         "on",
@@ -77,6 +78,26 @@ class LocalizationResourceTest {
     }
 
     @Test
+    void allLanguageFilesContainEveryDefaultLangReference() throws IOException {
+        Set<String> references = new TreeSet<>();
+        for (Path file : defaultYamlFiles()) {
+            collectLangReferences(load(file), references);
+        }
+
+        List<String> missing = new ArrayList<>();
+        for (Path file : languageYamlFiles()) {
+            YamlConfiguration language = load(file);
+            for (String reference : references) {
+                if (!language.contains(reference)) {
+                    missing.add(RESOURCES.relativize(file) + ":" + reference);
+                }
+            }
+        }
+
+        assertTrue(missing.isEmpty(), () -> "Language files are missing referenced keys: " + missing);
+    }
+
+    @Test
     void zhCnPlayerVisibleTextDoesNotContainEnglishWords() throws IOException {
         YamlConfiguration zhCn = load("lang/zh_cn.yml");
         List<String> leaks = new ArrayList<>();
@@ -114,15 +135,16 @@ class LocalizationResourceTest {
     }
 
     @Test
-    void defaultResourcesUseFourMainConfigFiles() {
-        List<String> expected = List.of("config.yml", "formats.yml", "rules.yml", "features.yml");
+    void defaultResourcesUseCompactMainConfigFiles() {
+        List<String> expected = List.of("config.yml", "rules.yml", "highlights.yml");
         List<String> missing = expected.stream()
             .filter(file -> !Files.exists(RESOURCES.resolve(file)))
             .toList();
         List<String> extra = List.of(
+            "formats.yml",
+            "features.yml",
             "private-messages.yml",
             "color-chat.yml",
-            "highlights.yml",
             "item-showcase.yml",
             "mentions.yml",
             "anti-spam.yml",
@@ -132,21 +154,95 @@ class LocalizationResourceTest {
             .filter(file -> Files.exists(RESOURCES.resolve(file)))
             .toList();
 
-        assertTrue(missing.isEmpty(), () -> "Default resources must include the four main config files: " + missing);
+        assertTrue(missing.isEmpty(), () -> "Default resources must include compact config files: " + missing);
         assertTrue(extra.isEmpty(), () -> "Default resources must not ship old split config files: " + extra);
     }
 
     @Test
-    void defaultChannelFilesUseSemanticNamesWithoutNumericPrefixes() throws IOException {
-        try (var stream = Files.walk(RESOURCES.resolve("channels"))) {
-            List<String> numbered = stream
+    void defaultRuleMessagesLiveInLanguageFiles() throws IOException {
+        YamlConfiguration rules = load("rules.yml");
+        List<String> inlineMessages = new ArrayList<>();
+
+        if (rules.isConfigurationSection("Anti-Spam.Messages")) {
+            inlineMessages.add("Anti-Spam.Messages");
+        }
+        for (var rule : rules.getMapList("Filter.Rules")) {
+            if (rule.containsKey("message")) {
+                Object id = rule.get("id");
+                inlineMessages.add("Filter.Rules." + (id == null ? "<unknown>" : id) + ".message");
+            }
+        }
+
+        assertTrue(inlineMessages.isEmpty(),
+            () -> "Default rules.yml must not inline user-facing messages; put them in lang/*.yml: " + inlineMessages);
+    }
+
+    @Test
+    void defaultChannelFolderKeepsPerChannelFilesOnly() throws IOException {
+        Path channels = RESOURCES.resolve("channels");
+        List<String> expected = List.of("global.yml", "cross-server.yml", "world.yml", "staff.yml");
+        List<String> missing = expected.stream()
+            .filter(file -> !Files.exists(channels.resolve(file)))
+            .toList();
+        List<String> extra;
+        try (var stream = Files.walk(channels)) {
+            extra = stream
                 .filter(Files::isRegularFile)
                 .map(path -> path.getFileName().toString())
-                .filter(name -> name.matches("\\d+-.+"))
+                .filter(name -> !expected.contains(name))
                 .toList();
-
-            assertTrue(numbered.isEmpty(), () -> "Default channel files must not use numeric prefixes: " + numbered);
         }
+
+        assertTrue(missing.isEmpty(), () -> "Default channel folder must keep channel files: " + missing);
+        assertTrue(extra.isEmpty(), () -> "Default channel folder must not ship channel settings or extra files: " + extra);
+    }
+
+    @Test
+    void defaultPublicChatFormatsLiveInChannelFiles() throws IOException {
+        YamlConfiguration config = load("config.yml");
+        List<String> missing = new ArrayList<>();
+        for (String channel : List.of("global", "cross-server", "world", "staff")) {
+            YamlConfiguration channelConfig = load("channels/" + channel + ".yml");
+            if (!channelConfig.isConfigurationSection("Format")) {
+                missing.add(channel + ".yml");
+            }
+        }
+
+        assertTrue(!config.isList("Formats"), "config.yml must not keep public chat Formats; put them in channels/*.yml");
+        assertTrue(missing.isEmpty(), () -> "Default channel files are missing Format sections: " + missing);
+    }
+
+    @Test
+    void defaultCrossServerSettingsLiveInCrossServerChannel() throws IOException {
+        YamlConfiguration config = load("config.yml");
+        YamlConfiguration global = load("channels/global.yml");
+        YamlConfiguration crossServer = load("channels/cross-server.yml");
+
+        assertTrue(!config.isConfigurationSection("Cross-Server"),
+            "config.yml must not keep Cross-Server; put it in the cross-server channel file");
+        assertTrue(!global.isConfigurationSection("Cross-Server"),
+            "channels/global.yml must remain the default non-cross-server channel");
+        assertTrue(!global.getBoolean("cross-server"),
+            "channels/global.yml must not publish to cross-server chat");
+        assertTrue(crossServer.isConfigurationSection("Cross-Server"),
+            "channels/cross-server.yml must define Cross-Server settings for the cross-server channel");
+        assertTrue(crossServer.getBoolean("cross-server"),
+            "channels/cross-server.yml must be the bundled cross-server channel");
+        assertTrue(!crossServer.getBoolean("Cross-Server.Enabled"),
+            "channels/cross-server.yml must default to local-only chat until Cross-Server.Enabled is turned on");
+    }
+
+    @Test
+    void defaultMegaphoneSettingsLiveInMegaphoneChannel() throws IOException {
+        YamlConfiguration config = load("config.yml");
+        YamlConfiguration world = load("channels/world.yml");
+
+        assertTrue(!config.isConfigurationSection("Megaphone"),
+            "config.yml must not keep Megaphone; put it in the megaphone/world channel file");
+        assertTrue(world.isConfigurationSection("Megaphone"),
+            "channels/world.yml must define Megaphone settings for the megaphone channel");
+        assertTrue(world.getBoolean("Megaphone.Capture-World-Channel"),
+            "channels/world.yml must keep world-channel megaphone capture enabled by default");
     }
 
     @Test
@@ -228,19 +324,6 @@ class LocalizationResourceTest {
         }
 
         assertTrue(placeholders.isEmpty(), () -> "Default config comments must describe concrete behavior: " + placeholders);
-    }
-
-    @Test
-    void defaultConfigResourcesKeepConfigTextInline() throws IOException {
-        List<String> references = new ArrayList<>();
-        for (Path file : defaultYamlFiles()) {
-            String content = Files.readString(file, StandardCharsets.UTF_8);
-            if (content.contains("lang:")) {
-                references.add(RESOURCES.relativize(file).toString());
-            }
-        }
-
-        assertTrue(references.isEmpty(), () -> "Default config resources must not use lang: references: " + references);
     }
 
     @Test

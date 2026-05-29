@@ -1,3 +1,4 @@
+# 基础行为：语言、默认聊天范围、兼容模式和调试输出。
 Options:
   Language: zh_cn
   Target: ALL
@@ -5,16 +6,91 @@ Options:
   Force-Legacy: false
   Debug: false
 
-Files:
-  Channels: 'channels'
-  Formats: 'formats.yml'
-  Private-Messages: 'features.yml'
-  Item-Showcase: 'features.yml'
-  Megaphone: 'features.yml'
-  Highlights: 'rules.yml'
-  Anti-Spam: 'rules.yml'
-  Filter: 'rules.yml'
+# 频道设置：Show-Display 控制是否在聊天中显示频道 display。
+Channels:
+  Show-Display: false
+  Default: global
+  # 默认不允许普通玩家自由切换频道；管理员可用 Admin-Permission 切换。
+  Switch:
+    Enabled: false
+    Admin-Permission: 'ymchat.channel.admin'
+    Cross-Server-Admin-Only: true
 
+# 私聊功能：/msg、/reply 和社交监听的格式都在这里控制。
+Private-Messages:
+  Enabled: true
+  Format:
+    Sender: '&#FF99CC[私聊 ➔ %target_name%] &#FFFFFF{message}'
+    Receiver: '&#FF99CC[%player_name% ➔ 你] &#FFFFFF{message}'
+    Spy: '&#777777[监听] &#FF99CC%player_name% ➔ %target_name%: &#FFFFFF{message}'
+  # 规则按 priority 从高到低匹配，命中后使用对应 sender/receiver/spy 格式。
+  Rules:
+    - id: default
+      priority: 10
+      condition: '~'
+      sender: '&#FF99CC[私聊 ➔ %target_name%] &#FFFFFF{message}'
+      receiver: '&#FF99CC[%player_name% ➔ 你] &#FFFFFF{message}'
+      spy: '&#777777[监听] &#FF99CC%player_name% ➔ %target_name%: &#FFFFFF{message}'
+    - id: admin
+      priority: 100
+      condition: 'perm "group.admin"'
+      sender: '&#FF6B6B[管理私聊 ➔ %target_name%] &#FFFFFF{message}'
+      receiver: '&#FF6B6B[%player_name% ➔ 你] &#FFFFFF{message}'
+      spy: '&#777777[管理监听] &#FF6B6B%player_name% ➔ %target_name%: &#FFFFFF{message}'
+
+# 聊天展示：允许玩家在消息里用 token 展示手持物、背包、末影箱或坐标。
+Item-Showcase:
+  Enabled: true
+  # 手持物展示：只替换配置的 token，Max-Per-Message 控制单条消息最多展示几个。
+  Item:
+    Enabled: true
+    Permission: 'ymchat.item.showcase'
+    Bypass-Cooldown-Permission: 'ymchat.item.showcase.bypass'
+    Cooldown-Millis: 3000
+    Tokens: ['[物品]', '[i]', ':i:']
+    Max-Per-Message: 1
+    Item-Text: '&#FFD700[{item_name} &#B0B0B0x{amount}&#FFD700]'
+  # 背包快照：点击聊天展示文本会打开快照预览 GUI。
+  Inventory:
+    Enabled: true
+    Permission: 'ymchat.showcase.inventory'
+    Bypass-Cooldown-Permission: 'ymchat.showcase.inventory.bypass'
+    Cooldown-Millis: 5000
+    Tokens: ['[背包]', '[inv]']
+    Max-Per-Message: 1
+    Text: '&#33CCFF[背包]'
+    Hover:
+      - '&#B0B0B0玩家: &#FFFFFF%player_name%'
+      - '&#33CCFF点击查看背包快照'
+  # 末影箱快照：权限和冷却与背包分开，适合单独开放。
+  Ender-Chest:
+    Enabled: true
+    Permission: 'ymchat.showcase.enderchest'
+    Bypass-Cooldown-Permission: 'ymchat.showcase.enderchest.bypass'
+    Cooldown-Millis: 5000
+    Tokens: ['[末影箱]', '[ec]']
+    Max-Per-Message: 1
+    Text: '&#D9A7FF[末影箱]'
+    Hover:
+      - '&#B0B0B0玩家: &#FFFFFF%player_name%'
+      - '&#D9A7FF点击查看末影箱快照'
+  # 坐标展示：Copy-Text 是玩家点击后复制到剪贴板的内容。
+  Position:
+    Enabled: true
+    Permission: 'ymchat.showcase.position'
+    Bypass-Cooldown-Permission: 'ymchat.showcase.position.bypass'
+    Cooldown-Millis: 1000
+    Tokens: ['[坐标]', '[pos]']
+    Max-Per-Message: 1
+    Text: '&#55E690[%world% %x% %y% %z%]'
+    Hover:
+      - '&#B0B0B0玩家: &#FFFFFF%player_name%'
+      - '&#B0B0B0世界: &#FFFFFF%world%'
+      - '&#B0B0B0坐标: &#FFFFFF%x%, %y%, %z%'
+      - '&#FFD700点击复制坐标'
+    Copy-Text: '%world% %x% %y% %z%'
+
+# 聊天颜色：Inline 控制消息内颜色码，Fixed 控制可选择的固定 RGB 颜色。
 Color-Chat:
   Inline:
     legacy-permission: 'ymchat.color.inline.legacy'
@@ -32,6 +108,21 @@ Color-Chat:
         permission: 'ymchat.color.rgb.sky'
         value: '#55CCFF'
 
+# 玩家名字颜色：只在聊天格式中写入 {name_color} token 的位置生效。
+Name-Color:
+  Fixed:
+    enabled: true
+    rgb-colors:
+      - id: pink
+        display: '&#FF99CC名字粉'
+        permission: 'ymchat.namecolor.rgb.pink'
+        value: '#FF55FF'
+      - id: sky
+        display: '&#33CCFF名字蓝'
+        permission: 'ymchat.namecolor.rgb.sky'
+        value: '#55CCFF'
+
+# 提及提醒：匹配 @玩家 和 @all 后会高亮，并可播放声音或发送 ActionBar。
 Mentions:
   Enabled: true
   Prefix: '@'
@@ -41,39 +132,5 @@ Mentions:
   Allow-Everyone: true
   Everyone-Permission: 'ymchat.mention.everyone'
   Everyone-Token: 'all'
-
-Cross-Server:
-  Enabled: false
-  Server-Id: 'survival-1'
-  Server-Name: '生存-1'
-  Poll-Interval-Ticks: 20
-  Batch-Size: 100
-  Retention-Hours: 24
-  Show-Origin: true
-  Origin-Format: '&#777777[&#33CCFF%origin_server%&#777777] '
-  Database:
-    Host: '127.0.0.1'
-    Port: 5432
-    Database: 'ymchat'
-    Schema: 'public'
-    Username: 'postgres'
-    Password: 'change-me'
-    Table: 'ymchat_cross_messages'
-    SSL: false
-  Logs:
-    Enabled: true
-    Permission: 'ymchat.logs'
-    Default-Since: '24h'
-    Default-Limit: 10
-    Max-Limit: 30
-    Timestamp-Format: 'MM-dd HH:mm:ss'
-    Header-Format: '&#777777[&#FFB833日志&#777777] &#B0B0B0筛选: &#FFFFFF%filters% &#777777(&#FFFFFF%count%&#777777)'
-    Line-Format: '&#777777[&#B0B0B0%time%&#777777] &#B0B0B0[%server%/%channel%] &#FFFFFF%sender%&#777777: &#FFFFFF%message%'
-    Hover-Format:
-      - '&#B0B0B0记录编号: &#FFFFFF%id%'
-      - '&#B0B0B0时间: &#FFFFFF%time_exact%'
-      - '&#B0B0B0服务器标识: &#FFFFFF%server_id%'
-      - '&#B0B0B0频道: &#FFFFFF%channel%'
-      - '&#B0B0B0玩家: &#FFFFFF%sender%'
-      - '&#FFD700点击复制完整记录'
-    Footer-Format: '%previous% &#B0B0B0第 &#FFFFFF%page%/%pages% &#B0B0B0页 %next%'
+  # 直接输入在线玩家真实名字时，也按 @ 提及处理；只会高亮和提醒，不会改写聊天内容。
+  Match-Plain-Names: true

@@ -1,6 +1,7 @@
 package ym.ymchat.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -18,7 +19,7 @@ class MentionServiceTest {
 
     @Test
     void extractsMentionsFromVisiblePlainText() {
-        MentionSettings settings = new MentionSettings(true, "@", "&b", "ENTITY_EXPERIENCE_ORB_PICKUP", true, true, "ymchat.mention.everyone", "all");
+        MentionSettings settings = new MentionSettings(true, "@", "&b", "ENTITY_EXPERIENCE_ORB_PICKUP", true, true, "ymchat.mention.everyone", "all", true);
 
         MentionService.MentionResult result = mentionService.extractMentions(
             "&e@Alice hello @all",
@@ -34,7 +35,7 @@ class MentionServiceTest {
 
     @Test
     void appliesHighlightColorOnTopOfPreparedMessage() {
-        MentionSettings settings = new MentionSettings(true, "@", "&b", "ENTITY_EXPERIENCE_ORB_PICKUP", true, true, "ymchat.mention.everyone", "all");
+        MentionSettings settings = new MentionSettings(true, "@", "&b", "ENTITY_EXPERIENCE_ORB_PICKUP", true, true, "ymchat.mention.everyone", "all", true);
         PublicChatColorService.PreparedPublicChatMessage prepared = colorService.prepare(
             "&e@Alice hello",
             "&f",
@@ -51,5 +52,37 @@ class MentionServiceTest {
 
         String serialized = RichText.serializeToSection(mentionService.applyHighlights(prepared, settings, result));
         assertEquals("\u00a7b@Alice\u00a7e hello", serialized);
+    }
+
+    @Test
+    void extractsPlainOnlinePlayerNamesAsMentions() {
+        MentionSettings settings = new MentionSettings(true, "@", "&b", "ENTITY_EXPERIENCE_ORB_PICKUP", true, true, "ymchat.mention.everyone", "all", true);
+
+        MentionService.MentionResult result = mentionService.extractMentions(
+            "Alice hello @Bob",
+            settings,
+            name -> name.equalsIgnoreCase("Alice") || name.equalsIgnoreCase("Bob"),
+            false
+        );
+
+        assertEquals(List.of("Alice", "Bob"), result.mentionedNames());
+        assertFalse(result.everyoneMentioned());
+        assertEquals(2, result.highlightRanges().size());
+        assertEquals(0, result.highlightRanges().getFirst().start());
+    }
+
+    @Test
+    void canDisablePlainOnlinePlayerNameMentions() {
+        MentionSettings settings = new MentionSettings(true, "@", "&b", "ENTITY_EXPERIENCE_ORB_PICKUP", true, true, "ymchat.mention.everyone", "all", false);
+
+        MentionService.MentionResult result = mentionService.extractMentions(
+            "Alice hello",
+            settings,
+            name -> name.equalsIgnoreCase("Alice"),
+            false
+        );
+
+        assertTrue(result.mentionedNames().isEmpty());
+        assertTrue(result.highlightRanges().isEmpty());
     }
 }

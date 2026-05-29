@@ -28,7 +28,7 @@ public record FilterRule(
     }
 
     public boolean appliesToChannel(String channelId) {
-        if (channels.isEmpty() || channelId == null || channelId.isBlank()) {
+        if (channels.isEmpty() || channels.contains("*") || channelId == null || channelId.isBlank()) {
             return true;
         }
         return channels.contains(channelId.toLowerCase(Locale.ROOT));

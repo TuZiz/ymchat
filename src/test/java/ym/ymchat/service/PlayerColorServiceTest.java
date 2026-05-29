@@ -14,6 +14,8 @@ import java.util.function.Predicate;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 import ym.ymchat.config.color.ColorChatSettings;
+import ym.ymchat.config.color.FixedColorSettings;
+import ym.ymchat.service.color.ColorScope;
 import ym.ymchat.service.color.PlayerColorPreference;
 import ym.ymchat.service.color.PlayerColorPreferenceRepository;
 import ym.ymchat.service.color.PlayerColorService;
@@ -76,7 +78,7 @@ class PlayerColorServiceTest {
     }
 
     @Test
-    void invalidStoredRgbFallsBackAndClearsPreference() {
+    void invalidStoredRgbFallsBackWithoutClearingPreference() {
         InMemoryRepository repository = new InMemoryRepository();
         PlayerColorService service = new PlayerColorService(repository);
         UUID playerId = UUID.randomUUID();
@@ -91,11 +93,11 @@ class PlayerColorServiceTest {
 
         assertEquals(PlayerColorService.ColorSource.RULE_DEFAULT, resolved.source());
         assertEquals("&f", resolved.baseColorValue());
-        assertNull(repository.get(playerId));
+        assertEquals("missing", repository.get(playerId).value());
     }
 
     @Test
-    void migratesLegacyPresetStorageToLegacyCode() {
+    void mapsLegacyPresetStorageWithoutWritingDuringResolve() {
         InMemoryRepository repository = new InMemoryRepository();
         PlayerColorService service = new PlayerColorService(repository);
         UUID playerId = UUID.randomUUID();
@@ -110,8 +112,27 @@ class PlayerColorServiceTest {
 
         assertEquals(PlayerColorService.ColorSource.MANUAL_LEGACY, resolved.source());
         assertEquals("&6", resolved.baseColorValue());
-        assertEquals(PlayerColorPreference.Mode.LEGACY, repository.get(playerId).mode());
-        assertEquals("6", repository.get(playerId).value());
+        assertEquals(PlayerColorPreference.Mode.PRESET, repository.get(playerId).mode());
+        assertEquals("gold", repository.get(playerId).value());
+    }
+
+    @Test
+    void unauthorizedStoredLegacyColorFallsBackWithoutClearingPreference() {
+        InMemoryRepository repository = new InMemoryRepository();
+        PlayerColorService service = new PlayerColorService(repository);
+        UUID playerId = UUID.randomUUID();
+        repository.save(playerId, PlayerColorPreference.legacy("d"));
+
+        PlayerColorService.ResolvedColor resolved = service.resolve(
+            playerId,
+            permissionChecker(),
+            ColorChatSettings.defaults(),
+            "&f"
+        );
+
+        assertEquals(PlayerColorService.ColorSource.RULE_DEFAULT, resolved.source());
+        assertEquals("&f", resolved.baseColorValue());
+        assertEquals("d", repository.get(playerId).value());
     }
 
     @Test
@@ -136,6 +157,17 @@ class PlayerColorServiceTest {
         assertTrue(service.setRgb(allowed.asPlayer(), ColorChatSettings.defaults(), "pink"));
         assertEquals("pink", repository.get(allowed.id()).value());
         assertFalse(service.setRgb(denied.asPlayer(), ColorChatSettings.defaults(), "pink"));
+    }
+
+    @Test
+    void nameScopeUsesNamePermissionsAndIndependentStorage() {
+        InMemoryRepository repository = new InMemoryRepository();
+        PlayerColorService service = new PlayerColorService(repository);
+        FakePlayer player = new FakePlayer("ymchat.namecolor.use", "ymchat.namecolor.d");
+
+        assertTrue(service.setLegacy(player.asPlayer(), ColorScope.NAME, FixedColorSettings.nameDefaults(), "d"));
+        assertEquals("d", repository.get(player.id(), ColorScope.NAME).value());
+        assertNull(repository.get(player.id(), ColorScope.CHAT));
     }
 
     @Test
@@ -241,21 +273,28 @@ class PlayerColorServiceTest {
 
     private static final class InMemoryRepository implements PlayerColorPreferenceRepository {
 
-        private final Map<UUID, PlayerColorPreference> values = new HashMap<>();
+        private final Map<Key, PlayerColorPreference> values = new HashMap<>();
 
         @Override
-        public PlayerColorPreference get(UUID playerId) {
-            return values.get(playerId);
+        public PlayerColorPreference get(UUID playerId, ColorScope scope) {
+            return values.get(new Key(playerId, scope));
         }
 
         @Override
-        public void save(UUID playerId, PlayerColorPreference preference) {
-            values.put(playerId, preference);
+        public void save(UUID playerId, ColorScope scope, PlayerColorPreference preference) {
+            values.put(new Key(playerId, scope), preference);
         }
 
         @Override
-        public void remove(UUID playerId) {
-            values.remove(playerId);
+        public void remove(UUID playerId, ColorScope scope) {
+            values.remove(new Key(playerId, scope));
+        }
+
+        private record Key(UUID playerId, ColorScope scope) {
+
+            private Key {
+                scope = scope == null ? ColorScope.CHAT : scope;
+            }
         }
     }
 }

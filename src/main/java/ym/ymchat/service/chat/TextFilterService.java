@@ -10,6 +10,16 @@ import ym.ymchat.config.filter.FilterSettings;
 
 public final class TextFilterService {
 
+    private static final int MIN_FUZZY_CLOUD_WORD_CODE_POINTS = 3;
+    private static final String ZERO_WIDTH_SEPARATORS = "\u200B\u200C\u200D\uFEFF";
+    private static final String CLOUD_WORD_SEPARATOR_PATTERN = "[\\s\\p{Punct}\\p{P}" + ZERO_WIDTH_SEPARATORS + "]*";
+
+    private final FilterCloudWordService cloudWordService;
+
+    public TextFilterService(FilterCloudWordService cloudWordService) {
+        this.cloudWordService = cloudWordService;
+    }
+
     public FilterResult apply(Player player, String rawMessage, String scope, String channelId, FilterSettings settings) {
         if (!settings.enabled()) {
             return FilterResult.pass(rawMessage);
@@ -38,7 +48,42 @@ public final class TextFilterService {
             modified = true;
         }
 
+        MatchOutcome cloudOutcome = applyCloudWords(player, result, scope, settings);
+        if (cloudOutcome.matched()) {
+            hits.add("cloud");
+            if ("block".equalsIgnoreCase(settings.cloudSettings().mode())) {
+                return FilterResult.blocked(settings.cloudSettings().message(), hits);
+            }
+            result = cloudOutcome.message();
+            modified = true;
+        }
+
         return FilterResult.pass(result, hits, modified);
+    }
+
+    private MatchOutcome applyCloudWords(Player player, String input, String scope, FilterSettings settings) {
+        if (cloudWordService == null
+            || settings.cloudSettings() == null
+            || !settings.cloudSettings().enabled()
+            || player.hasPermission(settings.cloudSettings().bypassPermission())
+            || settings.cloudSettings().scopes().stream()
+                .noneMatch(scopeValue -> "all".equalsIgnoreCase(scopeValue) || scopeValue.equalsIgnoreCase(scope))) {
+            return MatchOutcome.noMatch(input);
+        }
+
+        String result = input;
+        boolean matched = false;
+        for (String word : cloudWordService.words(settings.cloudSettings())) {
+            if (word == null || word.isBlank()) {
+                continue;
+            }
+            MatchOutcome outcome = replaceCloudWord(result, word, settings.cloudSettings().replacement());
+            if (outcome.matched()) {
+                result = outcome.message();
+                matched = true;
+            }
+        }
+        return matched ? MatchOutcome.matched(result) : MatchOutcome.noMatch(input);
     }
 
     private MatchOutcome applyRule(String input, FilterRule rule) {
@@ -60,15 +105,66 @@ public final class TextFilterService {
         if (!haystack.contains(needle)) {
             return MatchOutcome.noMatch(input);
         }
-        return MatchOutcome.matched(replaceLiteral(input, rule.match(), rule.replacement(), rule.caseSensitive()));
+        return replaceLiteral(input, rule.match(), rule.replacement(), rule.caseSensitive());
     }
 
-    private String replaceLiteral(String input, String search, String replacement, boolean caseSensitive) {
+    private MatchOutcome replaceCloudWord(String input, String search, String replacement) {
+        MatchOutcome literalOutcome = replaceLiteral(input, search, replacement, false);
+        if (literalOutcome.matched()
+            || searchableCodePointCount(search) < MIN_FUZZY_CLOUD_WORD_CODE_POINTS) {
+            return literalOutcome;
+        }
+        return replaceSeparatedLiteral(input, search, replacement);
+    }
+
+    private MatchOutcome replaceSeparatedLiteral(String input, String search, String replacement) {
+        String patternSource = separatedLiteralPattern(search);
+        if (patternSource.isBlank()) {
+            return MatchOutcome.noMatch(input);
+        }
+        Pattern pattern = Pattern.compile(
+            patternSource,
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.UNICODE_CHARACTER_CLASS
+        );
+        Matcher matcher = pattern.matcher(input);
+        if (!matcher.find()) {
+            return MatchOutcome.noMatch(input);
+        }
+        return MatchOutcome.matched(matcher.replaceAll(Matcher.quoteReplacement(replacement)));
+    }
+
+    private String separatedLiteralPattern(String search) {
+        StringBuilder pattern = new StringBuilder();
+        search.codePoints()
+            .filter(codePoint -> !Character.isWhitespace(codePoint))
+            .forEach(codePoint -> {
+                if (pattern.length() > 0) {
+                    pattern.append(CLOUD_WORD_SEPARATOR_PATTERN);
+                }
+                pattern.append(Pattern.quote(new String(Character.toChars(codePoint))));
+            });
+        return pattern.toString();
+    }
+
+    private int searchableCodePointCount(String search) {
+        return (int) search.codePoints()
+            .filter(codePoint -> !Character.isWhitespace(codePoint))
+            .count();
+    }
+
+    private MatchOutcome replaceLiteral(String input, String search, String replacement, boolean caseSensitive) {
         if (caseSensitive) {
-            return input.replace(search, replacement);
+            if (!input.contains(search)) {
+                return MatchOutcome.noMatch(input);
+            }
+            return MatchOutcome.matched(input.replace(search, replacement));
         }
         Pattern pattern = Pattern.compile(Pattern.quote(search), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
-        return pattern.matcher(input).replaceAll(Matcher.quoteReplacement(replacement));
+        Matcher matcher = pattern.matcher(input);
+        if (!matcher.find()) {
+            return MatchOutcome.noMatch(input);
+        }
+        return MatchOutcome.matched(matcher.replaceAll(Matcher.quoteReplacement(replacement)));
     }
 
     private record MatchOutcome(boolean matched, String message) {

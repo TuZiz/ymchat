@@ -19,6 +19,8 @@ commands:
       - '&#FFFF55/ymchat debug [on|off] &#AAAAAAtoggle personal debug'
       - '&#FFFF55/ymchat color &#AAAAAAshow current and available chat colors'
       - '&#FFFF55/ymchat color <0-f|rgbId|off|reset> &#AAAAAAswitch fixed chat color'
+      - '&#FFFF55/ymchat namecolor &#AAAAAAshow current and available name colors'
+      - '&#FFFF55/ymchat namecolor <0-f|rgbId|off|reset> &#AAAAAAswitch fixed name color'
       - '&#FFFF55/ymchat megaphone <chat|title|bossbar> <message> &#AAAAAAsend a server-wide megaphone'
       - '&#FFFF55/ymchat megaphone <give|take> <player> <amount> &#AAAAAAmanage megaphone balance'
       - '&#FFFF55/ymchat logs [player:<name>] [channel:<id>] [keyword:<text>] [since:<1h|24h|7d>] [page:<n>] [limit:<n>] &#AAAAAAsearch cross-server chat logs'
@@ -38,8 +40,15 @@ commands:
       force-legacy: '&#AAAAAAForce Legacy: &#FFFFFF%value%'
       global-debug: '&#AAAAAAGlobal Debug: &#FFFFFF%value%'
       language: '&#AAAAAALanguage: &#FFFFFF%value%'
+      channel-switch: '&#AAAAAAChannel Switch: &#FFFFFF%value%'
+      channel-switch-admin-only: '&#FFFF55admin only &#555555(%permission%)'
+      cross-server-sync: '&#AAAAAACross-Server Sync: &#FFFFFF%value%'
+      cross-server-disabled: '&#FFFF55disabled'
+      cross-server-misconfigured: '&#FF5555misconfigured'
+      cross-server-enabled: '&#55FF55enabled &#555555(%value%)'
       participating: '&#AAAAAAParticipating: &#FFFFFF%value%'
       channel: '&#AAAAAAChannel: &#FFFFFF%value%'
+      channel-cross-server: '&#AAAAAAChannel Cross-Server: &#FFFFFF%value%'
       reply-target: '&#AAAAAAReply Target: &#FFFFFF%value%'
       personal-debug: '&#AAAAAAPersonal Debug: &#FFFFFF%value%'
       socialspy: '&#AAAAAASocialSpy: &#FFFFFF%value%'
@@ -75,6 +84,35 @@ commands:
         manual-rgb: '%value%'
         manual-off: '&#FFFF55Fixed color disabled'
         rule-default: '&#AAAAAAUsing rule default'
+      mode:
+        none: 'none'
+        legacy: 'legacy:%value%'
+        preset: 'preset:%value%'
+        rgb: 'rgb:%value%'
+        'off': 'off'
+    namecolor:
+      only-player: '&#FF5555Only players can manage name color.'
+      fixed-disabled: '&#FF5555Fixed name color is disabled.'
+      no-permission: '&#FF5555You do not have permission to manage name colors.'
+      usage: '&#FFFF55Usage: /ymchat namecolor <colorCode|rgbId|off|reset>'
+      menu-removed: '&#FFFF55The color menu has been removed. Use commands to switch name colors.'
+      'off': '&#FFFF55Fixed name color disabled.'
+      reset: '&#FFFF55Saved name color cleared. Default name color will be used again.'
+      no-permission-legacy: '&#FF5555You do not have permission to use name color &#FFFFFF%color%&#FF5555.'
+      switched-legacy: '&#55FF55Name color switched to %color%&#55FF55.'
+      unknown: '&#FF5555Unknown name color: &#FFFFFF%color%'
+      no-permission-rgb: '&#FF5555You do not have permission to use name RGB color &#FFFFFF%color%&#FF5555.'
+      switched-rgb: '&#55FF55Name color switched to %color%&#55FF55.'
+      overview:
+        active: '&#AAAAAAActive Name Color: &#FFFFFF%value%'
+        saved-mode: '&#AAAAAASaved Mode: &#FFFFFF%value%'
+        legacy-colors: '&#AAAAAALegacy Colors: &#FFFFFF%value%'
+        rgb-colors: '&#AAAAAARGB Colors: &#FFFFFF%value%'
+      current:
+        manual-legacy: '%value%'
+        manual-rgb: '%value%'
+        manual-off: '&#FFFF55Fixed name color disabled'
+        rule-default: '&#AAAAAAUsing default name color'
       mode:
         none: 'none'
         legacy: 'legacy:%value%'
@@ -152,6 +190,7 @@ commands:
 service:
   channel:
     unknown: '&#FF5555Unknown channel: &#FFFFFF%channel%'
+    switch-disabled: '&#FFFF55Channel switching is disabled for regular players on this server.'
     no-permission: '&#FF5555You do not have permission to join channel &#FFFFFF%channel%'
     switched: '&#55FF55Switched to channel &#FFFFFF%channel%'
 
@@ -206,6 +245,52 @@ channels:
 cross-server:
   server-name: 'Survival-1'
   origin-format: '&#555555[&#55FFFF%origin_server%&#555555] '
+
+item-showcase:
+  command-message: 'showed [item]'
+  messages:
+    disabled: '&#555555[&#FF5555!&#555555] &#FF5555Showcase is disabled right now.'
+    only-player: '&#555555[&#FF5555!&#555555] &#FF5555Only players can showcase chat content.'
+  item:
+    text: '&#FFFF55[{item_name} &#AAAAAAx{amount}&#FFFF55]'
+    messages:
+      no-permission: '&#555555[&#FF5555!&#555555] &#FF5555You do not have permission to showcase items.'
+      empty-hand: '&#555555[&#FF5555!&#555555] &#FF5555You do not have an item in your main hand to showcase.'
+      cooldown: '&#555555[&#FFFF55!&#555555] &#FFFF55You are showcasing items too quickly. Try again in %remaining_seconds% seconds.'
+  snapshot:
+    text: '&#AAAAAA[Preview]'
+    messages:
+      no-permission: '&#555555[&#FF5555!&#555555] &#FF5555You do not have permission to showcase this content.'
+      empty: '&#555555[&#FF5555!&#555555] &#FF5555There is no content available to showcase.'
+      cooldown: '&#555555[&#FFFF55!&#555555] &#FFFF55You are showcasing too quickly. Try again in %remaining_seconds% seconds.'
+  inventory:
+    text: '&#55CCFF[Inventory]'
+    hover:
+      - '&#AAAAAAPlayer: &#FFFFFF%player_name%'
+      - '&#55CCFFClick to view the inventory snapshot'
+    messages:
+      no-permission: '&#555555[&#FF5555!&#555555] &#FF5555You do not have permission to showcase your inventory.'
+      empty: '&#555555[&#FF5555!&#555555] &#FF5555There is no inventory content available to showcase.'
+      cooldown: '&#555555[&#FFFF55!&#555555] &#FFFF55You are showcasing your inventory too quickly. Try again in %remaining_seconds% seconds.'
+  ender-chest:
+    text: '&#DDAAFF[Ender Chest]'
+    hover:
+      - '&#AAAAAAPlayer: &#FFFFFF%player_name%'
+      - '&#DDAAFFClick to view the ender chest snapshot'
+    messages:
+      no-permission: '&#555555[&#FF5555!&#555555] &#FF5555You do not have permission to showcase your ender chest.'
+      empty: '&#555555[&#FF5555!&#555555] &#FF5555There is no ender chest content available to showcase.'
+      cooldown: '&#555555[&#FFFF55!&#555555] &#FFFF55You are showcasing your ender chest too quickly. Try again in %remaining_seconds% seconds.'
+  position:
+    text: '&#55FF55[%world% %x% %y% %z%]'
+    hover:
+      - '&#AAAAAAPlayer: &#FFFFFF%player_name%'
+      - '&#AAAAAAWorld: &#FFFFFF%world%'
+      - '&#AAAAAAPosition: &#FFFFFF%x%, %y%, %z%'
+      - '&#FFFF55Click to copy coordinates'
+    messages:
+      no-permission: '&#555555[&#FF5555!&#555555] &#FF5555You do not have permission to showcase your position.'
+      cooldown: '&#555555[&#FFFF55!&#555555] &#FFFF55You are showcasing your position too quickly. Try again in %remaining_seconds% seconds.'
 
 color-chat:
   rgb:

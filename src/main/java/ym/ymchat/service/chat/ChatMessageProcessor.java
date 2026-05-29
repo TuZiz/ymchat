@@ -79,6 +79,7 @@ public final class ChatMessageProcessor {
             finalMessage,
             filtered.message(),
             channel.id(),
+            sender,
             config.publicChatHighlightSettings()
         );
         PreparedShowcase itemShowcase = plugin.getItemShowcaseService().prepare(

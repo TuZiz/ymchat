@@ -1,0 +1,49 @@
+# 跨服频道：cross-server 表示本频道支持跨服；Cross-Server.Enabled 关闭时仍按普通本服频道发送。
+id: cross-server
+display: '&#777777[&#33CCFF跨服&#777777] '
+target: ALL
+cross-server: true
+aliases: ['跨服', 'cf', 'cross']
+
+# 跨服开关：Enabled 为 true 且 PostgreSQL 配好后才会同步到其他子服。
+# 关闭时，本频道仍能正常聊天，只是不写入跨服存储。
+Cross-Server:
+  Enabled: false
+  Server-Id: 'survival-1'
+  Server-Name: '生存-1'
+  Poll-Interval-Ticks: 20
+  Batch-Size: 100
+  Retention-Hours: 24
+  Show-Origin: true
+  Origin-Format: '&#777777[&#33CCFF%origin_server%&#777777] '
+  Database:
+    Host: '127.0.0.1'
+    Port: 5432
+    Database: 'ymchat'
+    Schema: 'public'
+    Username: 'postgres'
+    Password: 'change-me'
+    Table: 'ymchat_cross_messages'
+    SSL: false
+  # 聊天日志查询：用于 /ymchat logs，Max-Limit 不建议调得过高。
+  Logs:
+    Enabled: true
+    Permission: 'ymchat.logs'
+    Default-Since: '24h'
+    Default-Limit: 10
+    Max-Limit: 30
+    Timestamp-Format: 'MM-dd HH:mm:ss'
+    Header-Format: '&#777777[&#FFB833日志&#777777] &#B0B0B0筛选: &#FFFFFF%filters% &#777777(&#FFFFFF%count%&#777777)'
+    Line-Format: '&#777777[&#B0B0B0%time%&#777777] &#B0B0B0[%server%/%channel%] &#FFFFFF%sender%&#777777: &#FFFFFF%message%'
+    Hover-Format:
+      - '&#B0B0B0记录编号: &#FFFFFF%id%'
+      - '&#B0B0B0时间: &#FFFFFF%time_exact%'
+      - '&#B0B0B0服务器标识: &#FFFFFF%server_id%'
+      - '&#B0B0B0频道: &#FFFFFF%channel%'
+      - '&#B0B0B0玩家: &#FFFFFF%sender%'
+      - '&#FFD700点击复制完整记录'
+    Footer-Format: '%previous% &#B0B0B0第 &#FFFFFF%page%/%pages% &#B0B0B0页 %next%'
+
+# 本频道聊天格式：默认继承 global 的 default 格式，避免重复维护整段 Format。
+Format:
+  inherit: default

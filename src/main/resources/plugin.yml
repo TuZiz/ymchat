@@ -23,7 +23,7 @@ commands:
     # 命令在 Bukkit 帮助信息中的中文说明。
     description: 'YmChat 主命令'
     # 命令用法提示，玩家输入错误时会展示。
-    usage: '/ymchat <reload|join|leave|status|channel|debug|color|megaphone|logs>'
+    usage: '/ymchat <reload|join|leave|status|channel|debug|color|namecolor|megaphone|logs>'
   # 频道切换命令注册，玩家可用中文别名快速切换聊天频道。
   channel:
     # 命令在 Bukkit 帮助信息中的中文说明。
@@ -90,6 +90,10 @@ permissions:
     default: true
   # 重载权限，允许管理员重新加载配置和语言文件。
   ymchat.reload:
+    # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 频道切换管理权限；默认配置下只有该权限可切换频道，跨服频道也只允许该权限进入。
+  ymchat.channel.admin:
     # 权限默认归属，true 为所有人，op 为管理员。
     default: op
   # 管理频道权限，允许进入 staff 频道。
@@ -211,6 +215,45 @@ permissions:
   # 权限节点注册，控制对应功能默认开放给谁。
   ymchat.color.f:
     # 权限默认归属，true 为所有人，op 为管理员。
+    default: op
+  # 玩家名字颜色基础权限。
+  ymchat.namecolor.use:
+    default: true
+  ymchat.namecolor.0:
+    default: op
+  ymchat.namecolor.1:
+    default: op
+  ymchat.namecolor.2:
+    default: op
+  ymchat.namecolor.3:
+    default: op
+  ymchat.namecolor.4:
+    default: op
+  ymchat.namecolor.5:
+    default: op
+  ymchat.namecolor.6:
+    default: op
+  ymchat.namecolor.7:
+    default: op
+  ymchat.namecolor.8:
+    default: op
+  ymchat.namecolor.9:
+    default: op
+  ymchat.namecolor.a:
+    default: op
+  ymchat.namecolor.b:
+    default: op
+  ymchat.namecolor.c:
+    default: op
+  ymchat.namecolor.d:
+    default: op
+  ymchat.namecolor.e:
+    default: op
+  ymchat.namecolor.f:
+    default: op
+  ymchat.namecolor.rgb.pink:
+    default: op
+  ymchat.namecolor.rgb.sky:
     default: op
   # 物品展示权限，允许展示主手物品。
   ymchat.item.showcase:

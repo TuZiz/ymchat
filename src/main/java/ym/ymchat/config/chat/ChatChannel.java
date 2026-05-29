@@ -28,6 +28,6 @@ public record ChatChannel(
     }
 
     public static ChatChannel global() {
-        return new ChatChannel("global", "&8[&b閸忋劍婀?8] ", TargetMode.ALL, "", "default", true, List.of("g"));
+        return new ChatChannel("global", "&8[&bGlobal&8] ", TargetMode.ALL, "", "default", false, List.of("g"));
     }
 }

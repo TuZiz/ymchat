@@ -19,6 +19,7 @@ import ym.ymchat.config.ChatPluginConfig;
 import ym.ymchat.service.chat.AntiSpamService;
 import ym.ymchat.service.chat.ChatMessageProcessor;
 import ym.ymchat.service.chat.ChannelService;
+import ym.ymchat.service.chat.FilterCloudWordService;
 import ym.ymchat.service.showcase.ChatShowcaseSnapshotService;
 import ym.ymchat.service.chat.ChatRenderer;
 import ym.ymchat.service.crossserver.CrossServerChatService;
@@ -31,6 +32,7 @@ import ym.ymchat.service.megaphone.MegaphoneBalanceStore;
 import ym.ymchat.service.megaphone.MegaphoneService;
 import ym.ymchat.service.crossserver.CrossServerLogService;
 import ym.ymchat.service.platform.PlatformBridge;
+import ym.ymchat.service.color.ColorScope;
 import ym.ymchat.service.color.PlayerColorPreferenceCacheRepository;
 import ym.ymchat.service.color.PlayerColorPreferenceStore;
 import ym.ymchat.service.color.PlayerColorService;
@@ -57,6 +59,7 @@ public final class YmChatPlugin extends JavaPlugin {
     private PrivateMessageService privateMessageService;
     private DebugService debugService;
     private TextFilterService textFilterService;
+    private FilterCloudWordService filterCloudWordService;
     private CrossServerChatService crossServerChatService;
     private PlayerColorPreferenceStore playerColorPreferenceStore;
     private PlayerColorPreferenceCacheRepository playerColorPreferenceRepository;
@@ -76,31 +79,33 @@ public final class YmChatPlugin extends JavaPlugin {
         saveDefaultConfig();
         saveResource("lang/zh_cn.yml", false);
         saveResource("lang/en_us.yml", false);
-        saveResource("player-colors.yml", false);
-        saveResource("channels/settings.yml", false);
         saveResource("channels/global.yml", false);
+        saveResource("channels/cross-server.yml", false);
         saveResource("channels/world.yml", false);
         saveResource("channels/staff.yml", false);
-        saveResource("formats.yml", false);
         saveResource("rules.yml", false);
-        saveResource("features.yml", false);
+        saveResource("highlights.yml", false);
         saveResource("gui/showcase-preview.yml", false);
         saveResource("gui/megaphone.yml", false);
         languageService = new LanguageService(getDataFolder());
         chatConfigFileLoader = new ChatConfigFileLoader(this);
         platformBridge = new PlatformBridge(this);
         dependencyBridge = new DependencyBridge(this);
-        chatRenderer = new ChatRenderer(dependencyBridge);
         channelService = new ChannelService(this::getChatConfig, languageService);
         antiSpamService = new AntiSpamService();
         mentionService = new MentionService(languageService);
         privateMessageService = new PrivateMessageService(this);
         debugService = new DebugService(this);
-        textFilterService = new TextFilterService();
+        filterCloudWordService = new FilterCloudWordService(this);
+        textFilterService = new TextFilterService(filterCloudWordService);
         crossServerChatService = new CrossServerChatService(this);
         playerColorPreferenceStore = new PlayerColorPreferenceStore(this);
         playerColorPreferenceRepository = new PlayerColorPreferenceCacheRepository(this, playerColorPreferenceStore, crossServerChatService);
         playerColorService = new PlayerColorService(playerColorPreferenceRepository);
+        chatRenderer = new ChatRenderer(
+            dependencyBridge,
+            (player, config) -> playerColorService.resolve(player, ColorScope.NAME, config.nameColorSettings(), "&f")
+        );
         publicChatColorService = new PublicChatColorService();
         publicChatHighlightService = new PublicChatHighlightService();
         showcasePreviewGuiService = new ShowcasePreviewGuiService(this);
@@ -120,6 +125,9 @@ public final class YmChatPlugin extends JavaPlugin {
         if (crossServerChatService != null) {
             crossServerChatService.close();
         }
+        if (filterCloudWordService != null) {
+            filterCloudWordService.close();
+        }
     }
 
     public void reloadChatSettings() {
@@ -127,6 +135,9 @@ public final class YmChatPlugin extends JavaPlugin {
         languageService.reload(getConfig());
         dependencyBridge.refresh();
         chatConfig = new ChatConfigLoader(languageService).load(chatConfigFileLoader.load(getConfig()));
+        if (filterCloudWordService != null) {
+            filterCloudWordService.reload(chatConfig.filterSettings().cloudSettings());
+        }
         crossServerChatService.reload(chatConfig.crossServerSettings());
         if (megaphoneService != null) {
             megaphoneService.reload(chatConfig.megaphoneSettings(), crossServerChatService.isEnabled());

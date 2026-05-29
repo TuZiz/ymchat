@@ -30,8 +30,8 @@ class PublicChatHighlightServiceTest {
     @Test
     void appliesKeywordAndPatternHighlights() {
         PublicChatColorService.PreparedPublicChatMessage highlighted = service.apply(
-            colorService.plain("sell 1000 x64 123 64 -90 8:30", "&f"),
-            "sell 1000 x64 123 64 -90 8:30",
+            colorService.plain("sell 1000coins x64 123 64 -90 8:30", "&f"),
+            "sell 1000coins x64 123 64 -90 8:30",
             "global",
             PublicChatHighlightSettings.defaults()
         );
@@ -39,10 +39,24 @@ class PublicChatHighlightServiceTest {
         String json = GsonComponentSerializer.gson().serialize(highlighted.toComponent()).toLowerCase(Locale.ROOT);
 
         assertTrue(json.contains("\"color\":\"#ffd166\""));
-        assertTrue(json.contains("\"color\":\"#f7b32b\""));
+        assertTrue(json.contains("\"color\":\"#d4af37\""));
         assertTrue(json.contains("\"color\":\"#4ecdc4\""));
         assertTrue(json.contains("\"color\":\"#5da9e9\""));
         assertTrue(json.contains("\"color\":\"#c77dff\""));
+    }
+
+    @Test
+    void doesNotHighlightPlainNumbersAsPrices() {
+        PublicChatColorService.PreparedPublicChatMessage highlighted = service.apply(
+            colorService.plain("10 100 2500", "&f"),
+            "10 100 2500",
+            "global",
+            PublicChatHighlightSettings.defaults()
+        );
+
+        String json = GsonComponentSerializer.gson().serialize(highlighted.toComponent()).toLowerCase(Locale.ROOT);
+
+        assertFalse(json.contains("\"color\":\"#d4af37\""));
     }
 
     @Test
@@ -51,8 +65,8 @@ class PublicChatHighlightServiceTest {
             true,
             List.of("*"),
             List.of(
-                new KeywordHighlightRule("high", true, 100, List.of("*"), "regex", "sell item", false, false, "&#FF0000", List.of()),
-                new KeywordHighlightRule("low", true, 10, List.of("*"), "literal", "sell", false, false, "&#0000FF", List.of())
+                new KeywordHighlightRule("high", true, 100, List.of("*"), "regex", "sell item", List.of(), false, false, "&#FF0000", List.of(), List.of(), "", "", ""),
+                new KeywordHighlightRule("low", true, 10, List.of("*"), "literal", "sell", List.of(), false, false, "&#0000FF", List.of(), List.of(), "", "", "")
             ),
             List.of()
         );
@@ -98,7 +112,7 @@ class PublicChatHighlightServiceTest {
         PublicChatHighlightSettings settings = new PublicChatHighlightSettings(
             true,
             List.of("*"),
-            List.of(new KeywordHighlightRule("mention", true, 100, List.of("*"), "literal", "@Alice", false, false, "&#FF0000", List.of("bold"))),
+            List.of(new KeywordHighlightRule("mention", true, 100, List.of("*"), "literal", "@Alice", List.of(), false, false, "&#FF0000", List.of("bold"), List.of(), "", "", "")),
             List.of()
         );
 
@@ -126,7 +140,7 @@ class PublicChatHighlightServiceTest {
         PublicChatHighlightSettings settings = new PublicChatHighlightSettings(
             true,
             List.of("trade"),
-            List.of(new KeywordHighlightRule("trade", true, 100, List.of(), "literal", "sell", false, false, "&#FFD166", List.of())),
+            List.of(new KeywordHighlightRule("trade", true, 100, List.of(), "literal", "sell", List.of(), false, false, "&#FFD166", List.of(), List.of(), "", "", "")),
             List.of()
         );
 
@@ -166,5 +180,119 @@ class PublicChatHighlightServiceTest {
 
         assertTrue(serialized.contains("ITEM"));
         assertTrue(serialized.contains("1000"));
+    }
+
+    @Test
+    void appliesMultipleKeywordMatchesHoverAndSuggest() {
+        PublicChatHighlightSettings settings = new PublicChatHighlightSettings(
+            true,
+            List.of("*"),
+            List.of(new KeywordHighlightRule(
+                "trade",
+                true,
+                100,
+                List.of("*"),
+                "literal",
+                "",
+                List.of("buy", "sell"),
+                false,
+                false,
+                "&#FFD166",
+                List.of("bold"),
+                List.of("&eTrade", "&7Click to reply"),
+                "/msg %player_name% I have ",
+                "",
+                ""
+            )),
+            List.of()
+        );
+
+        PublicChatColorService.PreparedPublicChatMessage highlighted = service.apply(
+            colorService.plain("sell diamond", "&f"),
+            "sell diamond",
+            "global",
+            null,
+            settings
+        );
+
+        String json = GsonComponentSerializer.gson().serialize(highlighted.toComponent()).toLowerCase(Locale.ROOT);
+
+        assertTrue(json.contains("\"color\":\"#ffd166\""));
+        assertTrue(json.contains("show_text"));
+        assertTrue(json.contains("suggest_command"));
+        assertTrue(json.contains("/msg  i have "));
+    }
+
+    @Test
+    void hidesSystemHoverLabelsFromLegacyHighlightConfigs() {
+        PublicChatHighlightSettings settings = new PublicChatHighlightSettings(
+            true,
+            List.of("*"),
+            List.of(new KeywordHighlightRule(
+                "trade",
+                true,
+                100,
+                List.of("*"),
+                "literal",
+                "收购",
+                List.of(),
+                false,
+                false,
+                "&#FFD166",
+                List.of("bold"),
+                List.of("&#FFD166✦ 交易关键词 ✦", "&#B0B0B0点击私聊对方并发送收购回复"),
+                "/msg %player_name% 你好，我手上有你需要收的 ",
+                "",
+                ""
+            )),
+            List.of()
+        );
+
+        PublicChatColorService.PreparedPublicChatMessage highlighted = service.apply(
+            colorService.plain("收购钻石", "&f"),
+            "收购钻石",
+            "global",
+            null,
+            settings
+        );
+
+        String json = GsonComponentSerializer.gson().serialize(highlighted.toComponent()).toLowerCase(Locale.ROOT);
+
+        assertFalse(json.contains("交易关键词"));
+        assertTrue(json.contains("点击私聊对方并发送收购回复"));
+    }
+
+    @Test
+    void appliesPatternCopyAction() {
+        PublicChatHighlightSettings settings = new PublicChatHighlightSettings(
+            true,
+            List.of("*"),
+            List.of(),
+            List.of(new ym.ymchat.config.highlight.PatternHighlightRule(
+                "coords",
+                true,
+                100,
+                List.of("*"),
+                List.of("-?\\d+\\s+-?\\d+\\s+-?\\d+"),
+                "&#5DA9E9",
+                List.of("underlined"),
+                List.of("&bCoordinates"),
+                "",
+                "",
+                "%message%"
+            ))
+        );
+
+        PublicChatColorService.PreparedPublicChatMessage highlighted = service.apply(
+            colorService.plain("go 10 64 -20", "&f"),
+            "go 10 64 -20",
+            "global",
+            settings
+        );
+
+        String json = GsonComponentSerializer.gson().serialize(highlighted.toComponent()).toLowerCase(Locale.ROOT);
+
+        assertTrue(json.contains("copy_to_clipboard"));
+        assertTrue(json.contains("go 10 64 -20"));
     }
 }

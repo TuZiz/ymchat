@@ -3,21 +3,55 @@ package ym.ymchat.service.chat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import org.bukkit.entity.Player;
 import ym.ymchat.config.highlight.KeywordHighlightRule;
 import ym.ymchat.config.highlight.PatternHighlightRule;
 import ym.ymchat.config.highlight.PublicChatHighlightSettings;
 
 import ym.ymchat.service.color.ColorCodeUtil;
 import ym.ymchat.service.color.PublicChatColorService;
+import ym.ymchat.service.text.RichText;
 public final class PublicChatHighlightService {
+
+    private static final Set<String> SYSTEM_HOVER_LABELS = Set.of(
+        "交易关键词",
+        "玩家求购",
+        "出售信息",
+        "出售货架",
+        "求助信息",
+        "紧急求助",
+        "组队信息",
+        "队伍招募",
+        "交易报价",
+        "物品数量",
+        "目标坐标",
+        "时间节点",
+        "价格",
+        "数量",
+        "坐标",
+        "时间"
+    );
 
     public PublicChatColorService.PreparedPublicChatMessage apply(
         PublicChatColorService.PreparedPublicChatMessage message,
         String visiblePlainText,
         String channelId,
+        PublicChatHighlightSettings settings
+    ) {
+        return apply(message, visiblePlainText, channelId, null, settings);
+    }
+
+    public PublicChatColorService.PreparedPublicChatMessage apply(
+        PublicChatColorService.PreparedPublicChatMessage message,
+        String visiblePlainText,
+        String channelId,
+        Player sender,
         PublicChatHighlightSettings settings
     ) {
         if (message == null || settings == null || !settings.enabled()) {
@@ -36,21 +70,23 @@ public final class PublicChatHighlightService {
             if (!rule.enabled() || !settings.appliesToChannel(rule.channels(), channelId)) {
                 continue;
             }
-            Pattern pattern = compileKeywordPattern(rule);
-            if (pattern == null) {
-                continue;
-            }
-            Matcher matcher = pattern.matcher(text);
-            while (matcher.find()) {
-                if (matcher.end() <= matcher.start()) {
+            for (String expression : rule.effectiveMatches()) {
+                Pattern pattern = compileKeywordPattern(rule, expression);
+                if (pattern == null) {
                     continue;
                 }
-                if (rule.wholeWord() && !wholeWord(text, matcher.start(), matcher.end())) {
-                    continue;
-                }
-                HighlightStyle style = HighlightStyle.from(rule, order++);
-                if (style.visibleEffect()) {
-                    applyMatch(coverage, matcher.start(), matcher.end(), style);
+                Matcher matcher = pattern.matcher(text);
+                while (matcher.find()) {
+                    if (matcher.end() <= matcher.start()) {
+                        continue;
+                    }
+                    if (rule.wholeWord() && !wholeWord(text, matcher.start(), matcher.end())) {
+                        continue;
+                    }
+                    HighlightStyle style = HighlightStyle.from(rule, order++, text, senderName(sender));
+                    if (style.visibleEffect()) {
+                        applyMatch(coverage, matcher.start(), matcher.end(), style);
+                    }
                 }
             }
         }
@@ -59,7 +95,7 @@ public final class PublicChatHighlightService {
             if (!rule.enabled() || !settings.appliesToChannel(rule.channels(), channelId)) {
                 continue;
             }
-            HighlightStyle style = HighlightStyle.from(rule, order++);
+            HighlightStyle style = HighlightStyle.from(rule, order++, text, senderName(sender));
             if (!style.visibleEffect()) {
                 continue;
             }
@@ -93,12 +129,12 @@ public final class PublicChatHighlightService {
         );
     }
 
-    private Pattern compileKeywordPattern(KeywordHighlightRule rule) {
-        if (rule.match() == null || rule.match().isBlank()) {
+    private Pattern compileKeywordPattern(KeywordHighlightRule rule, String expression) {
+        if (expression == null || expression.isBlank()) {
             return null;
         }
         int flags = rule.caseSensitive() ? 0 : Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
-        return compilePattern(rule.regex() ? rule.match() : Pattern.quote(rule.match()), flags);
+        return compilePattern(rule.regex() ? expression : Pattern.quote(expression), flags);
     }
 
     private Pattern compilePattern(String expression, int flags) {
@@ -170,10 +206,16 @@ public final class PublicChatHighlightService {
         HighlightStyle highlight
     ) {
         if (highlight == null) {
-            return new PublicChatColorService.TextSpan(text, base.colorValue(), base.formatCodes());
+            return new PublicChatColorService.TextSpan(text, base.colorValue(), base.formatCodes(), base.hover(), base.click());
         }
         String color = highlight.colorValue() == null ? base.colorValue() : highlight.colorValue();
-        return new PublicChatColorService.TextSpan(text, color, mergeFormatCodes(base.formatCodes(), highlight.formatCodes()));
+        return new PublicChatColorService.TextSpan(
+            text,
+            color,
+            mergeFormatCodes(base.formatCodes(), highlight.formatCodes()),
+            highlight.hover() == null ? base.hover() : highlight.hover(),
+            highlight.click() == null ? base.click() : highlight.click()
+        );
     }
 
     private boolean sameStyle(HighlightStyle left, HighlightStyle right) {
@@ -186,7 +228,9 @@ public final class PublicChatHighlightService {
         return left.priority() == right.priority()
             && left.order() == right.order()
             && equalsIgnoreCase(left.colorValue(), right.colorValue())
-            && left.formatCodes().equals(right.formatCodes());
+            && left.formatCodes().equals(right.formatCodes())
+            && sameComponent(left.hover(), right.hover())
+            && sameClick(left.click(), right.click());
     }
 
     private boolean equalsIgnoreCase(String left, String right) {
@@ -194,6 +238,14 @@ public final class PublicChatHighlightService {
             return right == null;
         }
         return right != null && left.equalsIgnoreCase(right);
+    }
+
+    private boolean sameComponent(Component left, Component right) {
+        return left == null ? right == null : left.equals(right);
+    }
+
+    private boolean sameClick(ClickEvent left, ClickEvent right) {
+        return left == null ? right == null : left.equals(right);
     }
 
     private boolean wholeWord(String text, int start, int end) {
@@ -215,23 +267,27 @@ public final class PublicChatHighlightService {
         return state.toFormatCodes();
     }
 
-    private record HighlightStyle(String colorValue, String formatCodes, int priority, int order) {
+    private record HighlightStyle(String colorValue, String formatCodes, int priority, int order, Component hover, ClickEvent click) {
 
-        private static HighlightStyle from(KeywordHighlightRule rule, int order) {
+        private static HighlightStyle from(KeywordHighlightRule rule, int order, String message, String playerName) {
             return new HighlightStyle(
                 ColorCodeUtil.normalizeBaseColorValue(rule.color()),
                 toFormatCodes(rule.formats()),
                 rule.priority(),
-                order
+                order,
+                buildHover(rule.hover(), message, playerName),
+                buildClick(rule.suggest(), rule.command(), rule.copy(), message, playerName)
             );
         }
 
-        private static HighlightStyle from(PatternHighlightRule rule, int order) {
+        private static HighlightStyle from(PatternHighlightRule rule, int order, String message, String playerName) {
             return new HighlightStyle(
                 ColorCodeUtil.normalizeBaseColorValue(rule.color()),
                 toFormatCodes(rule.formats()),
                 rule.priority(),
-                order
+                order,
+                buildHover(rule.hover(), message, playerName),
+                buildClick(rule.suggest(), rule.command(), rule.copy(), message, playerName)
             );
         }
 
@@ -243,8 +299,70 @@ public final class PublicChatHighlightService {
         }
 
         private boolean visibleEffect() {
-            return colorValue != null || (formatCodes != null && !formatCodes.isBlank());
+            return colorValue != null
+                || (formatCodes != null && !formatCodes.isBlank())
+                || hover != null
+                || click != null;
         }
+    }
+
+    private static Component buildHover(List<String> hoverLines, String message, String playerName) {
+        if (hoverLines == null || hoverLines.isEmpty()) {
+            return null;
+        }
+        Component result = Component.empty();
+        boolean first = true;
+        for (String line : hoverLines) {
+            if (line == null) {
+                continue;
+            }
+            String resolved = placeholders(line, message, playerName);
+            if (systemHoverLabel(resolved)) {
+                continue;
+            }
+            if (!first) {
+                result = result.append(Component.newline());
+            }
+            result = result.append(RichText.deserialize(resolved));
+            first = false;
+        }
+        return first ? null : result;
+    }
+
+    private static ClickEvent buildClick(String suggest, String command, String copy, String message, String playerName) {
+        if (suggest != null && !suggest.isBlank()) {
+            return ClickEvent.suggestCommand(placeholders(suggest, message, playerName));
+        }
+        if (command != null && !command.isBlank()) {
+            return ClickEvent.runCommand(placeholders(command, message, playerName));
+        }
+        if (copy != null && !copy.isBlank()) {
+            return ClickEvent.copyToClipboard(placeholders(copy, message, playerName));
+        }
+        return null;
+    }
+
+    private static String placeholders(String value, String message, String playerName) {
+        return value
+            .replace("%message%", message == null ? "" : message)
+            .replace("%player_name%", playerName == null ? "" : playerName);
+    }
+
+    private static boolean systemHoverLabel(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String plain = value
+            .replaceAll("&#[0-9A-Fa-f]{6}", "")
+            .replaceAll("(?i)[&§][0-9a-fk-or]", "")
+            .replace("✦", "")
+            .trim()
+            .replaceAll("\\s+", " ");
+        return SYSTEM_HOVER_LABELS.contains(plain);
+    }
+
+    private static String senderName(Player sender) {
+        return sender == null ? "" : sender.getName();
     }
 
     private static String toFormatCodes(List<String> formats) {

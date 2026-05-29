@@ -8,10 +8,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.zaxxer.hikari.HikariConfig;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.junit.jupiter.api.Test;
 import ym.ymchat.config.crossserver.DatabaseSettings;
+import ym.ymchat.config.highlight.KeywordHighlightRule;
+import ym.ymchat.config.highlight.PublicChatHighlightSettings;
+import ym.ymchat.service.chat.PublicChatHighlightService;
+import ym.ymchat.service.color.ColorScope;
 import ym.ymchat.service.color.PlayerColorPreference;
 
 class CrossServerChatServiceTest {
@@ -65,6 +73,20 @@ class CrossServerChatServiceTest {
     }
 
     @Test
+    void playerColorSqlPlanUsesScopePrimaryKeyAndCompatMigration() {
+        String table = CrossServerChatService.playerColorTableName("public.ymchat_cross_messages");
+        List<String> schema = CrossServerChatService.playerColorSchemaStatements(table);
+
+        assertTrue(schema.getFirst().contains("PRIMARY KEY (player_uuid, scope)"));
+        assertTrue(schema.stream().anyMatch(sql -> sql.contains("ADD COLUMN IF NOT EXISTS scope")));
+        assertTrue(schema.stream().anyMatch(sql -> sql.contains("DROP CONSTRAINT")));
+        assertTrue(CrossServerChatService.playerColorSelectSql(table).contains("scope = ?"));
+        assertTrue(CrossServerChatService.playerColorUpsertSql(table).contains("ON CONFLICT (player_uuid, scope)"));
+        assertTrue(CrossServerChatService.playerColorDeleteSql(table).contains("scope = ?"));
+        assertEquals("name", CrossServerChatService.normalizePlayerColorScope(ColorScope.NAME));
+    }
+
+    @Test
     void megaphoneBalanceTableNameFollowsCrossServerMessageTable() {
         assertEquals("public.ymchat_cross_messages_megaphone_balances", CrossServerChatService.megaphoneBalanceTableName("public.ymchat_cross_messages"));
     }
@@ -83,5 +105,80 @@ class CrossServerChatServiceTest {
         assertEquals("pink", CrossServerChatService.mapPlayerColorPreference("rgb", "pink").value());
         assertEquals(PlayerColorPreference.Mode.OFF, CrossServerChatService.mapPlayerColorPreference("off", "").mode());
         assertNull(CrossServerChatService.mapPlayerColorPreference("", "d"));
+    }
+
+    @Test
+    void remoteHighlightFallbackOnlyTouchesRenderedMessageSection() {
+        Component rendered = Component.empty()
+            .append(Component.text("[sell-server] ", NamedTextColor.GRAY))
+            .append(Component.text("Alice", NamedTextColor.WHITE))
+            .append(Component.text(": ").append(Component.text("sell diamond", NamedTextColor.WHITE)));
+
+        Component highlighted = CrossServerMessageHighlighter.apply(
+            rendered,
+            "cross-server",
+            new PublicChatHighlightService(),
+            literalSellHighlightSettings()
+        );
+        String json = GsonComponentSerializer.gson().serialize(highlighted).toLowerCase(Locale.ROOT);
+
+        assertEquals("[sell-server] Alice: sell diamond", CrossServerChatService.toPlainText(highlighted));
+        assertEquals(1, countOccurrences(json, "\"color\":\"#ff0000\""));
+    }
+
+    @Test
+    void remoteHighlightFallbackPreservesMessageInteractions() {
+        Component rendered = Component.empty()
+            .append(Component.text("Alice", NamedTextColor.WHITE))
+            .append(Component.text(": ").append(Component.text("sell diamond", NamedTextColor.WHITE)
+                .hoverEvent(HoverEvent.showText(Component.text("reply")))
+                .clickEvent(ClickEvent.suggestCommand("/msg Alice "))));
+
+        Component highlighted = CrossServerMessageHighlighter.apply(
+            rendered,
+            "cross-server",
+            new PublicChatHighlightService(),
+            literalSellHighlightSettings()
+        );
+        String json = GsonComponentSerializer.gson().serialize(highlighted).toLowerCase(Locale.ROOT);
+
+        assertTrue(json.contains("\"color\":\"#ff0000\""));
+        assertTrue(json.contains("show_text"));
+        assertTrue(json.contains("suggest_command"));
+    }
+
+    private static PublicChatHighlightSettings literalSellHighlightSettings() {
+        return new PublicChatHighlightSettings(
+            true,
+            List.of("*"),
+            List.of(new KeywordHighlightRule(
+                "sell",
+                true,
+                100,
+                List.of("*"),
+                "literal",
+                "sell",
+                List.of(),
+                false,
+                false,
+                "&#FF0000",
+                List.of(),
+                List.of(),
+                "",
+                "",
+                ""
+            )),
+            List.of()
+        );
+    }
+
+    private static int countOccurrences(String input, String needle) {
+        int count = 0;
+        int index = 0;
+        while ((index = input.indexOf(needle, index)) >= 0) {
+            count++;
+            index += needle.length();
+        }
+        return count;
     }
 }

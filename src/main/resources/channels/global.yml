@@ -1,6 +1,36 @@
+# 默认频道：普通全服聊天，不进入跨服同步。
 id: global
 display: '&#777777[&#33CCFF全服&#777777] '
 target: ALL
-format: default
-cross-server: true
+cross-server: false
 aliases: ['全服', 'g']
+
+# 本频道聊天格式：默认频道和跨服频道各自维护自己的 Format。
+Format:
+  id: default
+  condition: ~
+  priority: 100
+  msg:
+    default-color: '&f'
+    hover: '&#B0B0B0发送时间: &#FFFFFF%server_time_H:mm:ss%'
+  prefix:
+    text: '&#FFFFFF[&#00AAAA%multiverse-core_alias%&#FFFFFF]%tags_current% '
+    hover: '&#FFB833点击请求传送'
+    command: '/tpa %player_name%'
+  name:
+    - condition: 'player op'
+      text: '&#FF6B6B%player_name%'
+      hover: "&#B0B0B0网络延迟: &#55E690%player_ping% 毫秒\n&#B0B0B0当前血量: &#FF6B6B%player_health_rounded% ❤\n&#FFD700点击提及这名玩家"
+      suggest: '@%player_name% '
+    - text: '%luckperms_prefix%{name_color}%player_name%{name_reset}'
+      hover: "&#B0B0B0网络延迟: &#55E690%player_ping% 毫秒\n&#B0B0B0当前血量: &#FF6B6B%player_health_rounded% ❤\n&#FFD700点击提及这名玩家"
+      suggest: '@%player_name% '
+  message:
+    variants:
+      - condition: 'perm "group.admin"'
+        text: '&#FFFFFF: &#FF6B6B{message}'
+      - condition: 'perm "group.vip4"'
+        text: '&#FFFFFF: &#D9A7FF{message}'
+      - condition: 'perm "group.vip1"'
+        text: '&#FFFFFF: &#F2D349{message}'
+      - text: '&#FFFFFF: &#E0E0E0{message}'

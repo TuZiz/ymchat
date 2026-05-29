@@ -35,7 +35,7 @@ class PlayerColorPreferenceCacheRepositoryTest {
     }
 
     @Test
-    void usesLocalBackendSynchronouslyWhenCrossServerIsDisabled() {
+    void usesLocalBackendAsynchronouslyWhenCrossServerIsDisabled() {
         InMemoryBackend localBackend = new InMemoryBackend("local");
         InMemoryBackend crossServerBackend = new InMemoryBackend("cross-server");
         QueueingExecutor executor = new QueueingExecutor();
@@ -46,9 +46,13 @@ class PlayerColorPreferenceCacheRepositoryTest {
         repository.save(playerId, PlayerColorPreference.legacy("d"));
 
         assertEquals("d", repository.get(playerId).value());
-        assertEquals("d", localBackend.values().get(playerId).value());
-        assertEquals(0, executor.size());
+        assertNull(localBackend.values().get(playerId));
+        assertEquals(1, executor.size());
         assertNull(crossServerBackend.values().get(playerId));
+
+        executor.runAll();
+
+        assertEquals("d", localBackend.values().get(playerId).value());
     }
 
     @Test
@@ -109,6 +113,28 @@ class PlayerColorPreferenceCacheRepositoryTest {
         assertEquals("e", repository.get(playerId).value());
         assertEquals("e", crossServerBackend.values().get(playerId).value());
     }
+
+    @Test
+    void savesChatAndNameScopesIndependently() {
+        UUID playerId = UUID.randomUUID();
+        InMemoryBackend localBackend = new InMemoryBackend("local");
+        InMemoryBackend crossServerBackend = new InMemoryBackend("cross-server");
+        QueueingExecutor executor = new QueueingExecutor();
+        PlayerColorPreferenceCacheRepository repository = repository(localBackend, crossServerBackend, executor, id -> null);
+
+        repository.rebind(false);
+        repository.save(playerId, ColorScope.CHAT, PlayerColorPreference.legacy("d"));
+        repository.save(playerId, ColorScope.NAME, PlayerColorPreference.legacy("e"));
+
+        assertEquals("d", repository.get(playerId, ColorScope.CHAT).value());
+        assertEquals("e", repository.get(playerId, ColorScope.NAME).value());
+
+        executor.runAll();
+
+        assertEquals("d", localBackend.value(playerId, ColorScope.CHAT).value());
+        assertEquals("e", localBackend.value(playerId, ColorScope.NAME).value());
+    }
+
 
     @Test
     void preloadSkipsDirtyStateUntilAsyncWriteFinishes() {
@@ -222,7 +248,7 @@ class PlayerColorPreferenceCacheRepositoryTest {
     private static final class InMemoryBackend implements PlayerColorPreferencePersistenceBackend {
 
         private final String description;
-        private final Map<UUID, PlayerColorPreference> values = new HashMap<>();
+        private final Map<Key, PlayerColorPreference> values = new HashMap<>();
 
         private InMemoryBackend(String description) {
             this(description, Map.of());
@@ -230,22 +256,22 @@ class PlayerColorPreferenceCacheRepositoryTest {
 
         private InMemoryBackend(String description, Map<UUID, PlayerColorPreference> initialValues) {
             this.description = description;
-            this.values.putAll(initialValues);
+            initialValues.forEach((playerId, preference) -> this.values.put(new Key(playerId, ColorScope.CHAT), preference));
         }
 
         @Override
-        public PlayerColorPreference load(UUID playerId) {
-            return values.get(playerId);
+        public PlayerColorPreference load(UUID playerId, ColorScope scope) {
+            return values.get(new Key(playerId, scope));
         }
 
         @Override
-        public void save(UUID playerId, PlayerColorPreference preference) {
-            values.put(playerId, preference);
+        public void save(UUID playerId, ColorScope scope, PlayerColorPreference preference) {
+            values.put(new Key(playerId, scope), preference);
         }
 
         @Override
-        public void remove(UUID playerId) {
-            values.remove(playerId);
+        public void remove(UUID playerId, ColorScope scope) {
+            values.remove(new Key(playerId, scope));
         }
 
         @Override
@@ -254,7 +280,24 @@ class PlayerColorPreferenceCacheRepositoryTest {
         }
 
         private Map<UUID, PlayerColorPreference> values() {
-            return values;
+            Map<UUID, PlayerColorPreference> chatValues = new HashMap<>();
+            values.forEach((key, preference) -> {
+                if (key.scope() == ColorScope.CHAT) {
+                    chatValues.put(key.playerId(), preference);
+                }
+            });
+            return chatValues;
+        }
+
+        private PlayerColorPreference value(UUID playerId, ColorScope scope) {
+            return values.get(new Key(playerId, scope));
+        }
+
+        private record Key(UUID playerId, ColorScope scope) {
+
+            private Key {
+                scope = scope == null ? ColorScope.CHAT : scope;
+            }
         }
     }
 }

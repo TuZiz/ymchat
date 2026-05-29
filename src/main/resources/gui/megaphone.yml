@@ -1,3 +1,4 @@
+# 喇叭选择 GUI：Shape 使用字符布局，Key 定义每个字符对应的按钮行为。
 Title: '&#FFB833大喇叭喊话'
 Rows: 5
 Shape:
@@ -10,6 +11,7 @@ Key:
   "#":
     material: BLACK_STAINED_GLASS_PANE
     name: ' '
+  # suggest 会把命令填入聊天框，让玩家继续输入要广播的内容。
   "c":
     action: suggest
     material: PAPER
@@ -37,6 +39,7 @@ Key:
       - '&#B0B0B0位置: &#FFFFFF屏幕顶部栏'
       - '&#FFD700点击填充喊话命令'
     command: '/ymchat megaphone bossbar '
+  # v/h/i 是信息按钮，不消耗喇叭余额。
   "v":
     action: none
     material: AMETHYST_SHARD

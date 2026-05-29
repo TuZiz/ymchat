@@ -12,7 +12,11 @@ public final class AntiSpamService {
     private final Map<UUID, SpamState> states = new ConcurrentHashMap<>();
 
     public CheckResult check(Player player, String rawMessage, AntiSpamSettings settings) {
-        if (!settings.enabled() || player.hasPermission(settings.bypassPermission())) {
+        return check(player.getUniqueId(), player.hasPermission(settings.bypassPermission()), rawMessage, settings);
+    }
+
+    CheckResult check(UUID playerId, boolean bypass, String rawMessage, AntiSpamSettings settings) {
+        if (!settings.enabled() || bypass) {
             return CheckResult.pass();
         }
 
@@ -20,44 +24,21 @@ public final class AntiSpamService {
         if (settings.maxLength() > 0 && message.length() > settings.maxLength()) {
             return CheckResult.blocked(settings.tooLongMessage(), "max-length");
         }
-        if (settings.capsRatio() > 0 && capsRatio(message) > settings.capsRatio()) {
-            return CheckResult.blocked(settings.tooManyCapsMessage(), "caps-ratio");
-        }
 
         long now = System.currentTimeMillis();
-        SpamState previous = states.get(player.getUniqueId());
+        SpamState previous = states.get(playerId);
         if (previous != null) {
             if (settings.cooldownMillis() > 0 && now - previous.lastMessageAt() < settings.cooldownMillis()) {
                 return CheckResult.blocked(settings.tooFastMessage(), "cooldown");
             }
-            if (settings.blockDuplicate()
-                && settings.duplicateWindowMillis() > 0
-                && now - previous.lastMessageAt() < settings.duplicateWindowMillis()
-                && normalize(message).equals(previous.normalizedMessage())) {
-                return CheckResult.blocked(settings.duplicateMessage(), "duplicate");
-            }
         }
 
-        states.put(player.getUniqueId(), new SpamState(now, normalize(message)));
+        states.put(playerId, new SpamState(now, normalize(message)));
         return CheckResult.pass();
     }
 
     private String normalize(String message) {
         return message.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
-    }
-
-    private double capsRatio(String message) {
-        int letters = 0;
-        int upper = 0;
-        for (char character : message.toCharArray()) {
-            if (Character.isLetter(character)) {
-                letters++;
-                if (Character.isUpperCase(character)) {
-                    upper++;
-                }
-            }
-        }
-        return letters == 0 ? 0D : (double) upper / letters;
     }
 
     private record SpamState(long lastMessageAt, String normalizedMessage) {

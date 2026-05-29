@@ -1,3 +1,4 @@
+# 展示快照预览 GUI：Inventory 和 Ender-Chest 分别定义不同容器布局。
 Inventory:
   Title: '&#555555%player_name% 的背包快照'
   Shape:
@@ -17,6 +18,7 @@ Ender-Chest:
     - "eeeeeeeee"
     - "###S#X###"
 
+# Key 定义静态按钮；实际物品槽由代码按 Shape 中的 a/s/h/e/o 填充。
 Key:
   "#":
     material: BLACK_STAINED_GLASS_PANE
@@ -37,6 +39,7 @@ Key:
     lore:
       - '&#B0B0B0关闭这个展示快照界面。'
 
+# Types 用于把内部快照类型显示成可读文本。
 Types:
   inventory: '背包'
   ender-chest: '末影箱'

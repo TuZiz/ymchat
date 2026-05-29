@@ -1,7 +1,22 @@
+# 管理频道：需要 permission 才能加入或发送。
 id: staff
 display: '&#777777[&#FF6B6B管理&#777777] '
 target: ALL
 permission: 'ymchat.channel.staff'
-format: staff
 cross-server: false
 aliases: ['管理', 's']
+
+# 本频道聊天格式。
+Format:
+  id: staff
+  condition: ~
+  priority: 100
+  msg:
+    default-color: '&f'
+  prefix:
+    text: '&#777777[&#FF6B6B管理&#777777] '
+  name:
+    - text: '&#FF6B6B%player_name%'
+  message:
+    variants:
+      - text: '&#FFFFFF: &#FF6B6B{message}'

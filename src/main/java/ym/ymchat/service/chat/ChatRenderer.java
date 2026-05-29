@@ -2,6 +2,7 @@ package ym.ymchat.service.chat;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.function.BiFunction;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -13,7 +14,7 @@ import ym.ymchat.config.ChatPluginConfig;
 import ym.ymchat.config.chat.FormatRule;
 import ym.ymchat.config.chat.MessageOptions;
 import ym.ymchat.config.chat.SectionStyle;
-
+import ym.ymchat.service.color.PlayerColorService;
 import ym.ymchat.service.platform.DependencyBridge;
 import ym.ymchat.service.text.RichText;
 public final class ChatRenderer {
@@ -29,9 +30,28 @@ public final class ChatRenderer {
     );
 
     private final DependencyBridge dependencyBridge;
+    private final BiFunction<Player, String, String> placeholderResolver;
+    private final NameColorProvider nameColorProvider;
 
     public ChatRenderer(DependencyBridge dependencyBridge) {
+        this(dependencyBridge, (player, config) -> null);
+    }
+
+    public ChatRenderer(DependencyBridge dependencyBridge, NameColorProvider nameColorProvider) {
         this.dependencyBridge = dependencyBridge;
+        this.placeholderResolver = dependencyBridge == null
+            ? (player, input) -> input
+            : dependencyBridge::resolvePlaceholders;
+        this.nameColorProvider = nameColorProvider == null ? (player, config) -> null : nameColorProvider;
+    }
+
+    ChatRenderer(
+        BiFunction<Player, String, String> placeholderResolver,
+        NameColorProvider nameColorProvider
+    ) {
+        this.dependencyBridge = null;
+        this.placeholderResolver = placeholderResolver == null ? (player, input) -> input : placeholderResolver;
+        this.nameColorProvider = nameColorProvider == null ? (player, config) -> null : nameColorProvider;
     }
 
     public RenderedChat render(Player sender, ChatChannel channel, Component messageComponent, ChatPluginConfig config) {
@@ -45,12 +65,12 @@ public final class ChatRenderer {
 
         SectionStyle prefixSection = rule.firstPrefixVariant(sender);
         if (prefixSection.hasText()) {
-            result = result.append(buildStaticSection(sender, prefixSection));
+            result = result.append(buildStaticSection(sender, prefixSection, config, false));
         }
 
         SectionStyle nameSection = rule.firstNameVariant(sender);
         if (nameSection.hasText()) {
-            result = result.append(buildStaticSection(sender, nameSection));
+            result = result.append(buildStaticSection(sender, nameSection, config, true));
         }
 
         result = result.append(buildMessageSection(sender, messageComponent, rule.messageOptions(), rule.firstMessageVariant(sender)));
@@ -64,12 +84,12 @@ public final class ChatRenderer {
 
         SectionStyle prefixSection = rule.firstPrefixVariant(sender);
         if (shouldIncludeCrossServerPrefix(prefixSection)) {
-            result = result.append(buildStaticSection(sender, prefixSection));
+            result = result.append(buildStaticSection(sender, prefixSection, config, false));
         }
 
         SectionStyle nameSection = rule.firstNameVariant(sender);
         if (nameSection.hasText()) {
-            result = result.append(buildStaticSection(sender, nameSection));
+            result = result.append(buildStaticSection(sender, nameSection, config, true));
         }
 
         return result.append(buildMessageSection(sender, messageComponent, rule.messageOptions(), rule.firstMessageVariant(sender)));
@@ -80,8 +100,8 @@ public final class ChatRenderer {
         return Component.text(rawMessage).style(style == null ? Style.empty() : style);
     }
 
-    private Component buildStaticSection(Player player, SectionStyle section) {
-        Component component = RichText.deserialize(resolve(player, section.text()));
+    private Component buildStaticSection(Player player, SectionStyle section, ChatPluginConfig config, boolean nameSection) {
+        Component component = RichText.deserialize(resolveSectionText(player, section.text(), config, nameSection));
 
         if (section.hover() != null && !section.hover().isBlank()) {
             component = component.hoverEvent(HoverEvent.showText(RichText.deserialize(resolve(player, section.hover()))));
@@ -163,7 +183,21 @@ public final class ChatRenderer {
     }
 
     private String resolve(Player player, String input) {
-        return dependencyBridge.resolvePlaceholders(player, input);
+        return placeholderResolver.apply(player, input);
+    }
+
+    private String resolveSectionText(Player player, String input, ChatPluginConfig config, boolean nameSection) {
+        if (!nameSection || input == null || (!input.contains("{name_color}") && !input.contains("{name_reset}"))) {
+            return resolve(player, input);
+        }
+        PlayerColorService.ResolvedColor resolvedColor = nameColorProvider.resolve(player, config);
+        String color = resolvedColor == null || resolvedColor.baseColorValue() == null || resolvedColor.baseColorValue().isBlank()
+            ? "&f"
+            : resolvedColor.baseColorValue();
+        String withNameTokens = input
+            .replace("{name_color}", color)
+            .replace("{name_reset}", "&r");
+        return resolve(player, withNameTokens);
     }
 
     static boolean shouldIncludeCrossServerPrefix(SectionStyle section) {
@@ -187,5 +221,11 @@ public final class ChatRenderer {
     }
 
     public record RenderedChat(Component component, FormatRule rule) {
+    }
+
+    @FunctionalInterface
+    public interface NameColorProvider {
+
+        PlayerColorService.ResolvedColor resolve(Player player, ChatPluginConfig config);
     }
 }

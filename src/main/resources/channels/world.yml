@@ -1,6 +1,62 @@
+# 本服喊话频道：不进入跨服同步。
 id: world
 display: '&#777777[&#FFB833大喇叭&#777777] '
 target: ALL
-format: world
 cross-server: false
 aliases: ['大喇叭', '喇叭', '喊话', 'w']
+
+# 大喇叭功能：跟本频道放在一起维护；余额可走跨服 PostgreSQL，也可回退到本地 Data-File。
+Megaphone:
+  Data-File: 'megaphones.yml'
+  Use-Permission: 'ymchat.megaphone.use'
+  Admin-Permission: 'ymchat.megaphone.admin'
+  Default-Mode: chat
+  Capture-World-Channel: true
+  # 三种展示模式分别消耗不同余额；禁用某个模式不会影响其他模式。
+  Modes:
+    Chat:
+      Enabled: true
+      Cost: 1
+      Permission: 'ymchat.megaphone.chat'
+      Display: '聊天栏'
+      Format: '&#777777[&#FFB833大喇叭&#777777] &#55E690%player_name%&#777777: &#FFFFFF%message%'
+    Title:
+      Enabled: true
+      Cost: 3
+      Permission: 'ymchat.megaphone.title'
+      Display: '标题'
+      Title: '&#FFB833大喇叭'
+      Subtitle: '&#55E690%player_name%&#777777: &#FFFFFF%message%'
+      Fade-In-Ticks: 10
+      Stay-Ticks: 60
+      Fade-Out-Ticks: 10
+    BossBar:
+      Enabled: true
+      Cost: 5
+      Permission: 'ymchat.megaphone.bossbar'
+      Display: '顶部栏'
+      Text: '&#FFB833大喇叭 &#777777| &#55E690%player_name%&#777777: &#FFFFFF%message%'
+      Color: YELLOW
+      Style: SOLID
+      Duration-Ticks: 100
+      Progress: 1.0
+      Animation:
+        Enabled: true
+        Style: typing-flow
+        Interval-Ticks: 2
+        Flow-Width: 18
+
+# 本频道聊天格式。
+Format:
+  id: world
+  condition: ~
+  priority: 100
+  msg:
+    default-color: '&f'
+  prefix:
+    text: '&#777777[&#FFB833大喇叭&#777777] '
+  name:
+    - text: '&#FFB833%player_name%'
+  message:
+    variants:
+      - text: '&#777777» &#FFFFFF{message}'
