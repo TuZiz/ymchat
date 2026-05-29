@@ -94,20 +94,6 @@ public final class PlayerColorService {
         return new ResolvedColor(fallbackColor, ColorSource.RULE_DEFAULT, null, null);
     }
 
-    public List<String> availableLegacyCodes(Player player, ColorChatSettings settings) {
-        return availableLegacyCodes(player, ColorScope.CHAT, settings == null ? null : settings.fixedSettings());
-    }
-
-    public List<String> availableLegacyCodes(Player player, ColorScope scope, FixedColorSettings settings) {
-        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
-        if (!canUseCommands(player, effectiveScope, settings)) {
-            return List.of();
-        }
-        return LEGACY_CODES.stream()
-            .filter(code -> hasRuntimePermission(player, legacyPermission(effectiveScope, code)))
-            .toList();
-    }
-
     public List<ColorPreset> availableRgbColors(Player player, ColorChatSettings settings) {
         return availableRgbColors(player, ColorScope.CHAT, settings == null ? null : settings.fixedSettings());
     }
@@ -131,23 +117,6 @@ public final class PlayerColorService {
         return settings != null
             && settings.enabled()
             && hasRuntimePermission(player, effectiveScope.usePermission());
-    }
-
-    public boolean setLegacy(Player player, ColorChatSettings settings, String code) {
-        return setLegacy(player, ColorScope.CHAT, settings == null ? null : settings.fixedSettings(), code);
-    }
-
-    public boolean setLegacy(Player player, ColorScope scope, FixedColorSettings settings, String code) {
-        ColorScope effectiveScope = scope == null ? ColorScope.CHAT : scope;
-        if (!canUseCommands(player, effectiveScope, settings)) {
-            return false;
-        }
-        String normalized = normalizeLegacyCode(code);
-        if (normalized == null || !hasRuntimePermission(player, legacyPermission(effectiveScope, normalized))) {
-            return false;
-        }
-        repository.save(player.getUniqueId(), effectiveScope, PlayerColorPreference.legacy(normalized));
-        return true;
     }
 
     public boolean setRgb(Player player, ColorChatSettings settings, String rgbId) {

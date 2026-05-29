@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Proxy;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -14,6 +15,7 @@ import java.util.function.Predicate;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 import ym.ymchat.config.color.ColorChatSettings;
+import ym.ymchat.config.color.ColorPreset;
 import ym.ymchat.config.color.FixedColorSettings;
 import ym.ymchat.service.color.ColorScope;
 import ym.ymchat.service.color.PlayerColorPreference;
@@ -136,15 +138,13 @@ class PlayerColorServiceTest {
     }
 
     @Test
-    void setLegacyRequiresPermissionNode() {
+    void setRgbRejectsUnconfiguredLegacyId() {
         InMemoryRepository repository = new InMemoryRepository();
         PlayerColorService service = new PlayerColorService(repository);
         FakePlayer allowed = new FakePlayer("ymchat.color.use", "ymchat.color.d");
-        FakePlayer denied = new FakePlayer("ymchat.color.use");
 
-        assertTrue(service.setLegacy(allowed.asPlayer(), ColorChatSettings.defaults(), "d"));
-        assertEquals("d", repository.get(allowed.id()).value());
-        assertFalse(service.setLegacy(denied.asPlayer(), ColorChatSettings.defaults(), "d"));
+        assertFalse(service.setRgb(allowed.asPlayer(), ColorChatSettings.defaults(), "d"));
+        assertNull(repository.get(allowed.id()));
     }
 
     @Test
@@ -160,23 +160,48 @@ class PlayerColorServiceTest {
     }
 
     @Test
+    void configuredLegacyIdIsSavedAsRgbPreference() {
+        InMemoryRepository repository = new InMemoryRepository();
+        PlayerColorService service = new PlayerColorService(repository);
+        FakePlayer player = new FakePlayer("ymchat.color.use", "ymchat.color.d");
+        FixedColorSettings settings = new FixedColorSettings(
+            true,
+            List.of(new ColorPreset("d", "pink", "ymchat.color.d", "&d"))
+        );
+
+        assertTrue(service.setRgb(player.asPlayer(), ColorScope.CHAT, settings, "d"));
+
+        PlayerColorPreference stored = repository.get(player.id(), ColorScope.CHAT);
+        assertEquals(PlayerColorPreference.Mode.RGB, stored.mode());
+        assertEquals("d", stored.value());
+    }
+
+    @Test
     void nameScopeUsesNamePermissionsAndIndependentStorage() {
         InMemoryRepository repository = new InMemoryRepository();
         PlayerColorService service = new PlayerColorService(repository);
         FakePlayer player = new FakePlayer("ymchat.namecolor.use", "ymchat.namecolor.d");
+        FixedColorSettings settings = new FixedColorSettings(
+            true,
+            List.of(new ColorPreset("d", "pink", "ymchat.namecolor.d", "&d"))
+        );
 
-        assertTrue(service.setLegacy(player.asPlayer(), ColorScope.NAME, FixedColorSettings.nameDefaults(), "d"));
+        assertTrue(service.setRgb(player.asPlayer(), ColorScope.NAME, settings, "d"));
         assertEquals("d", repository.get(player.id(), ColorScope.NAME).value());
         assertNull(repository.get(player.id(), ColorScope.CHAT));
     }
 
     @Test
-    void opCanUseLegacyColorWithoutExplicitPermissionNode() {
+    void opCanUseConfiguredColorWithoutExplicitPermissionNode() {
         InMemoryRepository repository = new InMemoryRepository();
         PlayerColorService service = new PlayerColorService(repository);
         FakePlayer op = new FakePlayer(true, "ymchat.color.use");
+        FixedColorSettings settings = new FixedColorSettings(
+            true,
+            List.of(new ColorPreset("e", "yellow", "ymchat.color.e", "&e"))
+        );
 
-        assertTrue(service.setLegacy(op.asPlayer(), ColorChatSettings.defaults(), "e"));
+        assertTrue(service.setRgb(op.asPlayer(), ColorScope.CHAT, settings, "e"));
         assertEquals("e", repository.get(op.id()).value());
     }
 

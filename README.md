@@ -30,7 +30,7 @@ YmChat is a chat plugin scaffold that reads YAML rules and renders clickable / h
 - Dedicated private-message rule chain via `Private-Messages.Rules`
 - Word filter system with `block` / `replace`, scope, channel limits, and regex support
 - `@mention` highlight with sound and actionbar notification
-- Persistent legacy or configured RGB public chat color preferences
+- Persistent configured public chat and name color preferences
 - Anti-spam checks for cooldown, max length, caps ratio, and duplicate messages
 - Toggleable per-player debug trace
 - Runtime commands: `/ymchat reload`, `/ymchat join`, `/ymchat leave`, `/ymchat status`
@@ -58,7 +58,7 @@ Files:
 Default layout:
 
 - `config.yml`: base options, private messages, mentions, and showcase settings
-- `colors.yml`: inline color permissions plus shared RGB color values with separate chat/name permissions
+- `colors.yml`: inline color permissions plus shared fixed color values with separate chat/name permissions
 - `rules.yml`: anti-spam and filter rules
 - `highlights.yml`: public chat highlight rules
 - `channels/global.yml`, `channels/cross-server.yml`, `channels/world.yml`, `channels/staff.yml`: one channel per file, using readable names instead of numeric prefixes; `world.yml` is now the default megaphone channel
@@ -111,9 +111,9 @@ Condition expressions support:
 - `/socialspy` toggle private message spy mode
 - `/ymchat debug [on|off]` toggle personal debug output
 - `/ymchat color` show current and available fixed public chat colors
-- `/ymchat color <0-f|rgbId|off|reset>` switch fixed public chat color
+- `/ymchat color <colorId|off|reset>` switch fixed public chat color
 - `/ymchat namecolor` show current and available fixed name colors
-- `/ymchat namecolor <0-f|rgbId|off|reset>` switch fixed name color
+- `/ymchat namecolor <colorId|off|reset>` switch fixed name color
 - `/ymchat megaphone chat <message>` send a chat-bar megaphone broadcast
 - `/ymchat megaphone title <message>` send a title megaphone broadcast
 - `/ymchat megaphone bossbar <message>` send a bossbar megaphone broadcast
@@ -126,7 +126,7 @@ Condition expressions support:
 ## New config sections
 
 - `config.yml`: locale, feature settings, mentions, and private-message rules
-- `colors.yml`: shared RGB values, chat color permissions, and name color permissions
+- `colors.yml`: shared fixed color values, chat color permissions, and name color permissions
 - `rules.yml`: anti-spam and word filtering
 - `highlights.yml`: public chat keyword and pattern highlighting
 - `channels/*.yml`: available channels, aliases, permissions, target mode, and `format`
@@ -139,10 +139,11 @@ Condition expressions support:
 - Chat rendering is re-scheduled onto the player thread on Folia, and onto the normal server thread on Spigot/Paper.
 - If PlaceholderAPI is not installed, unsupported placeholders are left as-is.
 - 默认配置和 GUI 文件的展示文案保持内联，方便服主直接改；旧服已经写过的语言键引用仍会兼容解析。
-- Legacy fixed colors use `ymchat.color.0` through `ymchat.color.f`; RGB colors are defined once in `colors.yml` under `Colors.rgb-colors`.
-- Chat color switching is command-only. Use `/ymchat color` to view available values, `/ymchat color <0-f|rgbId>` to switch, `/ymchat color off` to turn fixed color off, and `/ymchat color reset` to clear the saved preference.
-- Each shared RGB color has separate `chat-permission` and `name-permission` entries.
+- Fixed colors are defined once in `colors.yml` under `Colors.rgb-colors`. The default file includes `0` through `f`; removing an entry removes it from command selection.
+- Players can only select color ids declared in `colors.yml`; arbitrary values are rejected until they are added there.
+- Chat color switching is command-only. Use `/ymchat color` to view available values, `/ymchat color <colorId>` to switch, `/ymchat color off` to turn fixed color off, and `/ymchat color reset` to clear the saved preference.
+- Each shared color has separate `chat-permission` and `name-permission` entries.
 - Name color tokens only apply where the selected name section includes `{name_color}` and `{name_reset}`.
-- Name color switching is command-only. Use `/ymchat namecolor` to view available values, `/ymchat namecolor <0-f|rgbId>` to switch, `/ymchat namecolor off` to turn fixed name color off, and `/ymchat namecolor reset` to clear the saved preference.
+- Name color switching is command-only. Use `/ymchat namecolor` to view available values, `/ymchat namecolor <colorId>` to switch, `/ymchat namecolor off` to turn fixed name color off, and `/ymchat namecolor reset` to clear the saved preference.
 - `/展示` and `[i]` still only read the main-hand item; `[inv]`, `[ec]`, and `[pos]` are also public-chat-only tokens.
 - Inventory and ender chest showcase previews use `gui/showcase-preview.yml`, stay read-only, and can be opened across servers when cross-server chat storage is enabled.

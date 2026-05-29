@@ -260,7 +260,19 @@ class LocalizationResourceTest {
         assertTrue(colors.isConfigurationSection("Name-Color"),
             "colors.yml must define Name-Color settings");
         assertTrue(!colors.getMapList("Colors.rgb-colors").isEmpty(),
-            "colors.yml must define shared RGB colors");
+            "colors.yml must define shared fixed colors");
+        for (String id : List.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f")) {
+            var color = colors.getMapList("Colors.rgb-colors").stream()
+                .filter(entry -> id.equals(String.valueOf(entry.get("id"))))
+                .findFirst();
+            assertTrue(color.isPresent(), () -> "colors.yml must include default color id " + id);
+            assertTrue(("&" + id).equals(color.get().get("value")),
+                () -> "default color " + id + " must use legacy value &" + id);
+            assertTrue(("ymchat.color." + id).equals(color.get().get("chat-permission")),
+                () -> "default chat color " + id + " must use ymchat.color." + id);
+            assertTrue(("ymchat.namecolor." + id).equals(color.get().get("name-permission")),
+                () -> "default name color " + id + " must use ymchat.namecolor." + id);
+        }
     }
 
     @Test

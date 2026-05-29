@@ -264,21 +264,6 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        String legacyCode = PlayerColorService.normalizeLegacyCode(action);
-        if (legacyCode != null) {
-            if (!plugin.getPlayerColorService().setLegacy(player, scope, fixedSettings, legacyCode)) {
-                CommandMessages.sendKey(plugin, player, messageRoot + ".no-permission-legacy", "color", legacyCode);
-                return true;
-            }
-            CommandMessages.sendKey(
-                plugin,
-                player,
-                messageRoot + ".switched-legacy",
-                "color", legacyColorDisplay(legacyCode)
-            );
-            return true;
-        }
-
         ColorPreset rgbColor = fixedSettings.findRgbColor(action);
         if (rgbColor == null) {
             CommandMessages.sendKey(plugin, player, messageRoot + ".unknown", "color", action);
@@ -323,26 +308,17 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
         String defaultColor
     ) {
         PlayerColorService.ResolvedColor resolved = resolveColor(player, scope, defaultColor);
-        List<String> legacyCodes = plugin.getPlayerColorService().availableLegacyCodes(player, scope, fixedSettings);
         List<ColorPreset> rgbColors = plugin.getPlayerColorService().availableRgbColors(player, scope, fixedSettings);
         CommandMessages.sendKey(plugin, player, messageRoot + ".overview.active", "value", describeCurrentColor(resolved, messageRoot));
         CommandMessages.sendKey(plugin, player, messageRoot + ".overview.saved-mode", "value", describeStoredMode(resolved.preference(), messageRoot));
         CommandMessages.sendKey(
             plugin,
             player,
-            messageRoot + ".overview.legacy-colors",
-            "value", legacyCodes.isEmpty()
+            messageRoot + ".overview.rgb-colors",
+            "value", rgbColors.isEmpty()
                 ? plugin.getLanguageService().get("common.none")
-                : String.join("&#AAAAAA, ", legacyCodes.stream().map(this::legacyColorDisplay).toList())
+                : String.join("&#AAAAAA, &#FFFFFF", rgbColors.stream().map(ColorPreset::id).toList())
         );
-        if (!rgbColors.isEmpty()) {
-            CommandMessages.sendKey(
-                plugin,
-                player,
-                messageRoot + ".overview.rgb-colors",
-                "value", String.join("&#AAAAAA, &#FFFFFF", rgbColors.stream().map(ColorPreset::id).toList())
-            );
-        }
     }
 
     private PlayerColorService.ResolvedColor resolveColor(Player player, ChatChannel channel) {
@@ -449,7 +425,6 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
             && sender instanceof Player player
             && plugin != null) {
             LinkedHashSet<String> values = new LinkedHashSet<>(COLOR_ACTIONS_LEGACY);
-            values.addAll(plugin.getPlayerColorService().availableLegacyCodes(player, plugin.getChatConfig().colorChatSettings()));
             values.addAll(plugin.getPlayerColorService().availableRgbColors(player, plugin.getChatConfig().colorChatSettings())
                 .stream()
                 .map(ColorPreset::id)
@@ -462,7 +437,6 @@ public final class YmChatCommand implements CommandExecutor, TabCompleter {
             && plugin != null) {
             LinkedHashSet<String> values = new LinkedHashSet<>(COLOR_ACTIONS_LEGACY);
             FixedColorSettings fixedSettings = plugin.getChatConfig().nameColorSettings();
-            values.addAll(plugin.getPlayerColorService().availableLegacyCodes(player, ColorScope.NAME, fixedSettings));
             values.addAll(plugin.getPlayerColorService().availableRgbColors(player, ColorScope.NAME, fixedSettings)
                 .stream()
                 .map(ColorPreset::id)
