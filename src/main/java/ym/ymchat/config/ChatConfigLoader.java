@@ -71,7 +71,7 @@ public final class ChatConfigLoader {
         AntiSpamSettings antiSpamSettings = parseAntiSpam(config);
         MentionSettings mentionSettings = parseMentionSettings(config);
         ColorChatSettings colorChatSettings = parseColorChatSettings(config);
-        FixedColorSettings nameColorSettings = parseFixedColorSettings(config, "Name-Color.Fixed", FixedColorSettings.nameDefaults());
+        FixedColorSettings nameColorSettings = parseFixedColorSettings(config, "Name-Color.Fixed", FixedColorSettings.nameDefaults(), "name");
         MegaphoneSettings megaphoneSettings = new MegaphoneConfigParser(languageService).parse(config);
         PublicChatHighlightSettings publicChatHighlightSettings = parsePublicChatHighlightSettings(config);
         ItemShowcaseSettings itemShowcaseSettings = new ItemShowcaseConfigParser(languageService).parse(config);
@@ -355,7 +355,7 @@ public final class ChatConfigLoader {
         ColorChatSettings defaults = ColorChatSettings.defaults();
         InlineColorSettings inlineDefaults = defaults.inlineSettings();
         FixedColorSettings fixedDefaults = defaults.fixedSettings();
-        FixedColorSettings fixedSettings = parseFixedColorSettings(config, "Color-Chat.Fixed", fixedDefaults);
+        FixedColorSettings fixedSettings = parseFixedColorSettings(config, "Color-Chat.Fixed", fixedDefaults, "chat");
         return new ColorChatSettings(
             new InlineColorSettings(
                 config.getString("Color-Chat.Inline.legacy-permission", inlineDefaults.legacyPermission()),
@@ -366,17 +366,15 @@ public final class ChatConfigLoader {
         );
     }
 
-    private FixedColorSettings parseFixedColorSettings(FileConfiguration config, String path, FixedColorSettings defaults) {
-        List<ColorPreset> rgbColors = new ArrayList<>();
-        for (Object rawPreset : config.getList(path + ".rgb-colors", List.of())) {
-            if (rawPreset instanceof Map<?, ?> map) {
-                rgbColors.add(new ColorPreset(
-                    asString(map.get("id"), ""),
-                    localizedString(map.get("display"), ""),
-                    asString(map.get("permission"), ""),
-                    asString(map.get("value"), "")
-                ));
-            }
+    private FixedColorSettings parseFixedColorSettings(
+        FileConfiguration config,
+        String path,
+        FixedColorSettings defaults,
+        String scopeKey
+    ) {
+        List<ColorPreset> rgbColors = parseScopedRgbColors(config, path + ".rgb-colors");
+        if (rgbColors.isEmpty()) {
+            rgbColors = parseSharedRgbColors(config, scopeKey);
         }
         if (rgbColors.isEmpty()) {
             rgbColors = defaults.rgbColors().stream()
@@ -392,6 +390,81 @@ public final class ChatConfigLoader {
             config.getBoolean(path + ".enabled", defaults.enabled()),
             rgbColors
         );
+    }
+
+    private List<ColorPreset> parseScopedRgbColors(FileConfiguration config, String path) {
+        List<ColorPreset> rgbColors = new ArrayList<>();
+        for (Object rawPreset : config.getList(path, List.of())) {
+            if (rawPreset instanceof Map<?, ?> map) {
+                ColorPreset preset = parseColorPreset(map, "permission", "");
+                if (preset != null) {
+                    rgbColors.add(preset);
+                }
+            }
+        }
+        return rgbColors;
+    }
+
+    private List<ColorPreset> parseSharedRgbColors(FileConfiguration config, String scopeKey) {
+        List<?> rawColors = config.getList("Colors.rgb-colors", List.of());
+        if (rawColors.isEmpty()) {
+            rawColors = config.getList("Colors.Fixed.rgb-colors", List.of());
+        }
+
+        List<ColorPreset> rgbColors = new ArrayList<>();
+        for (Object rawPreset : rawColors) {
+            if (rawPreset instanceof Map<?, ?> map) {
+                ColorPreset preset = parseColorPreset(map, scopeKey + "-permission", defaultRgbPermission(scopeKey, asString(map.get("id"), "")));
+                if (preset != null) {
+                    rgbColors.add(preset);
+                }
+            }
+        }
+        return rgbColors;
+    }
+
+    private ColorPreset parseColorPreset(Map<?, ?> map, String permissionKey, String defaultPermission) {
+        String id = asString(map.get("id"), "").trim();
+        if (id.isBlank()) {
+            return null;
+        }
+        String scopedKey = permissionKey.endsWith("-permission")
+            ? permissionKey.substring(0, permissionKey.length() - "-permission".length())
+            : "";
+        Object display = firstPresent(scopedKey.isBlank() ? null : map.get(scopedKey + "-display"), map.get("display"));
+        return new ColorPreset(
+            id,
+            localizedString(display, ""),
+            firstNonBlank(
+                asString(map.get(permissionKey), ""),
+                asString(asMap(map.get("permissions")).get(scopedKey), ""),
+                defaultPermission
+            ),
+            asString(map.get("value"), "")
+        );
+    }
+
+    private String defaultRgbPermission(String scopeKey, String id) {
+        if (id == null || id.isBlank()) {
+            return "";
+        }
+        return "name".equalsIgnoreCase(scopeKey)
+            ? "ymchat.namecolor.rgb." + id
+            : "ymchat.color.rgb." + id;
+    }
+
+    private Object firstPresent(Object first, Object second) {
+        return first == null ? second : first;
+    }
+
+    private String firstNonBlank(String first, String second, String third) {
+        if (first != null && !first.isBlank()) {
+            return first;
+        }
+        if (second != null && !second.isBlank()) {
+            return second;
+        }
+        return third == null ? "" : third;
     }
 
     private PublicChatHighlightSettings parsePublicChatHighlightSettings(FileConfiguration config) {

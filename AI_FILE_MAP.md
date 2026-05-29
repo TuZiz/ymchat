@@ -84,9 +84,9 @@ Do not aggressively split or rewrite `CrossServerChatService` without focused te
 - Showcase config parser and records: `config/showcase`
 - Defaults/resources:
   - `src/main/resources/config.yml`
-  - `src/main/resources/formats.yml`
+  - `src/main/resources/colors.yml`
   - `src/main/resources/rules.yml`
-  - `src/main/resources/features.yml`
+  - `src/main/resources/highlights.yml`
   - `src/main/resources/channels/*.yml`
   - `src/main/resources/lang/zh_cn.yml`
   - `src/main/resources/lang/en_us.yml`

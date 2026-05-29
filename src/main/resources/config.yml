@@ -90,38 +90,6 @@ Item-Showcase:
       - '&#FFD700点击复制坐标'
     Copy-Text: '%world% %x% %y% %z%'
 
-# 聊天颜色：Inline 控制消息内颜色码，Fixed 控制可选择的固定 RGB 颜色。
-Color-Chat:
-  Inline:
-    legacy-permission: 'ymchat.color.inline.legacy'
-    format-permission: 'ymchat.color.inline.format'
-    rgb-permission: 'ymchat.color.inline.rgb'
-  Fixed:
-    enabled: true
-    rgb-colors:
-      - id: pink
-        display: '&#FF99CC粉色'
-        permission: 'ymchat.color.rgb.pink'
-        value: '#FF55FF'
-      - id: sky
-        display: '&#33CCFF天蓝'
-        permission: 'ymchat.color.rgb.sky'
-        value: '#55CCFF'
-
-# 玩家名字颜色：只在聊天格式中写入 {name_color} token 的位置生效。
-Name-Color:
-  Fixed:
-    enabled: true
-    rgb-colors:
-      - id: pink
-        display: '&#FF99CC名字粉'
-        permission: 'ymchat.namecolor.rgb.pink'
-        value: '#FF55FF'
-      - id: sky
-        display: '&#33CCFF名字蓝'
-        permission: 'ymchat.namecolor.rgb.sky'
-        value: '#55CCFF'
-
 # 提及提醒：匹配 @玩家 和 @all 后会高亮，并可播放声音或发送 ActionBar。
 Mentions:
   Enabled: true

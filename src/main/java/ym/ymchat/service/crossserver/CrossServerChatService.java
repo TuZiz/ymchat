@@ -493,8 +493,18 @@ public final class CrossServerChatService implements AutoCloseable {
         if (!pending.isEmpty()) {
             lastSeenId = newestId;
             for (RemoteChatMessage message : pending) {
-                deliver(message);
+                deliverSafely(message);
             }
+        }
+    }
+
+    private void deliverSafely(RemoteChatMessage message) {
+        try {
+            deliver(message);
+        } catch (RuntimeException exception) {
+            plugin.getLogger().warning(
+                "Failed to deliver cross-server chat message " + message.id() + ": " + exception.getMessage()
+            );
         }
     }
 

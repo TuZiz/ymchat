@@ -1,0 +1,25 @@
+# 颜色配置：聊天文字和玩家名字共用同一组 RGB 颜色值，但权限分开。
+Color-Chat:
+  Inline:
+    legacy-permission: 'ymchat.color.inline.legacy'
+    format-permission: 'ymchat.color.inline.format'
+    rgb-permission: 'ymchat.color.inline.rgb'
+  Fixed:
+    enabled: true
+
+Name-Color:
+  Fixed:
+    enabled: true
+
+Colors:
+  rgb-colors:
+    - id: pink
+      display: '&#FF99CC粉色'
+      value: '#FF55FF'
+      chat-permission: 'ymchat.color.rgb.pink'
+      name-permission: 'ymchat.namecolor.rgb.pink'
+    - id: sky
+      display: '&#33CCFF天蓝'
+      value: '#55CCFF'
+      chat-permission: 'ymchat.color.rgb.sky'
+      name-permission: 'ymchat.namecolor.rgb.sky'

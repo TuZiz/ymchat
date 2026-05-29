@@ -267,6 +267,25 @@ class ChatConfigLoaderTest {
     }
 
     @Test
+    void sharedRgbColorsUseSeparateChatAndNamePermissions() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("Colors.rgb-colors", List.of(java.util.Map.of(
+            "id", "mint",
+            "display", "&#55FFAAMint",
+            "value", "#55FFAA",
+            "chat-permission", "ymchat.color.rgb.mint",
+            "name-permission", "ymchat.namecolor.rgb.mint"
+        )));
+
+        ChatPluginConfig loaded = new ChatConfigLoader().load(config);
+
+        assertEquals("#55FFAA", loaded.colorChatSettings().fixedSettings().findRgbColor("mint").value());
+        assertEquals("#55FFAA", loaded.nameColorSettings().findRgbColor("mint").value());
+        assertEquals("ymchat.color.rgb.mint", loaded.colorChatSettings().fixedSettings().findRgbColor("mint").permission());
+        assertEquals("ymchat.namecolor.rgb.mint", loaded.nameColorSettings().findRgbColor("mint").permission());
+    }
+
+    @Test
     void loadsFilterCloudSettingsFromConfig() {
         YamlConfiguration config = new YamlConfiguration();
         config.set("Filter.Enabled", true);

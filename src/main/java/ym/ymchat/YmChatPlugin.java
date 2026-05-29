@@ -83,6 +83,7 @@ public final class YmChatPlugin extends JavaPlugin {
         saveResource("channels/cross-server.yml", false);
         saveResource("channels/world.yml", false);
         saveResource("channels/staff.yml", false);
+        saveResource("colors.yml", false);
         saveResource("rules.yml", false);
         saveResource("highlights.yml", false);
         saveResource("gui/showcase-preview.yml", false);

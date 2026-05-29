@@ -9,7 +9,7 @@ Use this file as the first project-introspection token for AI agents working in 
 - Language: Java 21
 - Build: Gradle Kotlin DSL
 - Main plugin class: `ym.ymchat.YmChatPlugin`
-- Main resources: `src/main/resources/plugin.yml`, `config.yml`, `formats.yml`, `rules.yml`, `features.yml`
+- Main resources: `src/main/resources/plugin.yml`, `config.yml`, `colors.yml`, `rules.yml`, `highlights.yml`, `channels/*.yml`
 
 ## Fast Commands
 
@@ -59,7 +59,7 @@ The verified jar output is `build/libs/YmChat-1.0.0-SNAPSHOT.jar`.
 - Services are grouped by domain under `service/chat`, `service/color`, `service/crossserver`, `service/megaphone`, `service/showcase`, `service/text`, etc.
 - `ChatMessageProcessor` owns the chat processing workflow previously embedded in `YmChatPlugin`.
 - Showcase runtime data is split into `ShowcaseType`, `ShowcaseSource`, `SnapshotGateway`, `PreparedShowcase`, and `ShowcaseReplacement`.
-- `ChatConfigLoader` is the top-level config coordinator. `config/megaphone/MegaphoneConfigParser` and `config/showcase/ItemShowcaseConfigParser` own their feature-specific config parsing.
+- `ChatConfigLoader` is the top-level config coordinator. `colors.yml` owns shared chat/name color definitions; `config/megaphone/MegaphoneConfigParser` and `config/showcase/ItemShowcaseConfigParser` own their feature-specific config parsing.
 - `CrossServerChatService` is intentionally still large because it is the consistency boundary for cross-server storage.
 
 ## Search First

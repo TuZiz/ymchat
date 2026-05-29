@@ -11,13 +11,15 @@ YmChat is a chat plugin scaffold that reads YAML rules and renders clickable / h
 - Click actions: `command`, `suggest`, `url`, `copy`
 - Permission-aware inline color chat for public channels
 - Fixed per-player public chat color with permission nodes and `/ymchat color`
+- Fixed per-player name color with `/ymchat namecolor`
+- Name color tokens: `{name_color}` and `{name_reset}`
 - Megaphone channel based on the former `world` channel, with chat, title, and bossbar broadcast modes
 - Persistent megaphone balances with `/ymchat megaphone give` and `/ymchat megaphone take`
 - Configurable public chat message highlighting for keywords, price, quantity, coordinates, and time
 - Multi-showcase public chat tokens: `/展示`, `[i]`, `:i:`, `[inv]`, `[ec]`, `[pos]`
 - Cross-server inventory / ender chest snapshot previews through shared snapshot ids
 - Cross-server chat log search via `/ymchat logs`
-- Four-file config layout with a dedicated `channels/` folder for channel definitions
+- Compact config layout with dedicated `channels/` and `colors.yml` resources
 - Unified compatibility listener based on `AsyncPlayerChatEvent`
 - Folia-safe player scheduling for render and delivery
 - Config sections are split into `prefix`, `name`, and `message`
@@ -35,7 +37,7 @@ YmChat is a chat plugin scaffold that reads YAML rules and renders clickable / h
 
 ## Config shape
 
-The default install uses four main config files. Cross-server and database settings stay in `config.yml`; channel definitions live in `channels/`; GUI layouts stay in `gui/`, language packs stay in `lang/`, and player color preferences stay in `player-colors.yml`.
+The default install keeps base feature settings in `config.yml`; shared chat/name color presets live in `colors.yml`; channel definitions live in `channels/`; GUI layouts stay in `gui/`, language packs stay in `lang/`, and player color preferences stay in `player-colors.yml`.
 
 ```yml
 Options:
@@ -47,9 +49,7 @@ Options:
 
 Files:
   Channels: 'channels'
-  Formats: 'formats.yml'
-  Private-Messages: 'features.yml'
-  Item-Showcase: 'features.yml'
+  Colors: 'colors.yml'
   Highlights: 'rules.yml'
   Anti-Spam: 'rules.yml'
   Filter: 'rules.yml'
@@ -57,16 +57,15 @@ Files:
 
 Default layout:
 
-- `config.yml`: base options, file paths, fixed color, mentions, cross-server, and database settings
-- `formats.yml`: public chat format rules
-- `rules.yml`: highlights, anti-spam, and filter rules
-- `features.yml`: private messages, megaphone settings, and item/inventory/ender chest/position showcase
-- `channels/settings.yml`: default channel and channel-display toggle
-- `channels/global.yml`, `channels/world.yml`, `channels/staff.yml`: one channel per file, using readable names instead of numeric prefixes; `world.yml` is now the default megaphone channel
+- `config.yml`: base options, private messages, mentions, and showcase settings
+- `colors.yml`: inline color permissions plus shared RGB color values with separate chat/name permissions
+- `rules.yml`: anti-spam and filter rules
+- `highlights.yml`: public chat highlight rules
+- `channels/global.yml`, `channels/cross-server.yml`, `channels/world.yml`, `channels/staff.yml`: one channel per file, using readable names instead of numeric prefixes; `world.yml` is now the default megaphone channel
 
 Older installs that still point `Files` to the old `config/` folder are still readable. YmChat will log a migration hint and merge those files at runtime, but it will not overwrite, delete, or move existing server files automatically.
 
-The original sample duplicated `prefix.player`, which is not valid YAML. Format rules live under the `Formats` section in `formats.yml`; the recommended shape is:
+The original sample duplicated `prefix.player`, which is not valid YAML. Format rules live in each channel file under `Format`; after loading they are merged into `Channels.Formats`. The recommended shape is:
 
 ```yml
 Formats:
@@ -81,9 +80,9 @@ Formats:
       command: '/tpa %player_name%'
     name:
       - condition: 'player op'
-        text: '%player_name%'
+        text: '%luckperms_prefix%{name_color}%player_name%{name_reset}'
         suggest: '@%player_name% '
-      - text: '%luckperms_prefix%%player_name%'
+      - text: '%luckperms_prefix%{name_color}%player_name%{name_reset}'
     message:
       variants:
         - condition: 'perm "group.admin"'
@@ -113,6 +112,8 @@ Condition expressions support:
 - `/ymchat debug [on|off]` toggle personal debug output
 - `/ymchat color` show current and available fixed public chat colors
 - `/ymchat color <0-f|rgbId|off|reset>` switch fixed public chat color
+- `/ymchat namecolor` show current and available fixed name colors
+- `/ymchat namecolor <0-f|rgbId|off|reset>` switch fixed name color
 - `/ymchat megaphone chat <message>` send a chat-bar megaphone broadcast
 - `/ymchat megaphone title <message>` send a title megaphone broadcast
 - `/ymchat megaphone bossbar <message>` send a bossbar megaphone broadcast
@@ -124,10 +125,10 @@ Condition expressions support:
 
 ## New config sections
 
-- `config.yml`: locale, file mapping, fixed color, mentions, cross-server, and database settings
-- `formats.yml`: public chat format rules, hover text, click actions, and message variants
-- `rules.yml`: keyword highlights, numeric highlights, anti-spam, and word filtering
-- `features.yml`: private messages, megaphone settings, and chat showcase settings
+- `config.yml`: locale, feature settings, mentions, and private-message rules
+- `colors.yml`: shared RGB values, chat color permissions, and name color permissions
+- `rules.yml`: anti-spam and word filtering
+- `highlights.yml`: public chat keyword and pattern highlighting
 - `channels/*.yml`: available channels, aliases, permissions, target mode, and `format`
 - `gui/showcase-preview.yml`: Shape-based read-only preview GUI for inventory and ender chest snapshots
 - `gui/megaphone.yml`: Shape-based megaphone menu resource for chat, title, and bossbar broadcast entries
@@ -138,7 +139,10 @@ Condition expressions support:
 - Chat rendering is re-scheduled onto the player thread on Folia, and onto the normal server thread on Spigot/Paper.
 - If PlaceholderAPI is not installed, unsupported placeholders are left as-is.
 - 默认配置和 GUI 文件的展示文案保持内联，方便服主直接改；旧服已经写过的语言键引用仍会兼容解析。
-- Legacy fixed colors use `ymchat.color.0` through `ymchat.color.f`; RGB colors are defined by `Color-Chat.Fixed.rgb-colors`.
+- Legacy fixed colors use `ymchat.color.0` through `ymchat.color.f`; RGB colors are defined once in `colors.yml` under `Colors.rgb-colors`.
 - Chat color switching is command-only. Use `/ymchat color` to view available values, `/ymchat color <0-f|rgbId>` to switch, `/ymchat color off` to turn fixed color off, and `/ymchat color reset` to clear the saved preference.
+- Each shared RGB color has separate `chat-permission` and `name-permission` entries.
+- Name color tokens only apply where the selected name section includes `{name_color}` and `{name_reset}`.
+- Name color switching is command-only. Use `/ymchat namecolor` to view available values, `/ymchat namecolor <0-f|rgbId>` to switch, `/ymchat namecolor off` to turn fixed name color off, and `/ymchat namecolor reset` to clear the saved preference.
 - `/展示` and `[i]` still only read the main-hand item; `[inv]`, `[ec]`, and `[pos]` are also public-chat-only tokens.
 - Inventory and ender chest showcase previews use `gui/showcase-preview.yml`, stay read-only, and can be opened across servers when cross-server chat storage is enabled.

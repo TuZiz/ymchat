@@ -16,7 +16,7 @@ Format:
   prefix:
     text: '&#777777[&#FF6B6B管理&#777777] '
   name:
-    - text: '&#FF6B6B%player_name%'
+    - text: '%luckperms_prefix%{name_color}%player_name%{name_reset}'
   message:
     variants:
       - text: '&#FFFFFF: &#FF6B6B{message}'

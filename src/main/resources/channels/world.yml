@@ -19,14 +19,14 @@ Megaphone:
       Cost: 1
       Permission: 'ymchat.megaphone.chat'
       Display: '聊天栏'
-      Format: '&#777777[&#FFB833大喇叭&#777777] &#55E690%player_name%&#777777: &#FFFFFF%message%'
+      Format: '&#777777[&#FFB833大喇叭&#777777] %luckperms_prefix%{name_color}%player_name%{name_reset}&#777777: &#FFFFFF%message%'
     Title:
       Enabled: true
       Cost: 3
       Permission: 'ymchat.megaphone.title'
       Display: '标题'
       Title: '&#FFB833大喇叭'
-      Subtitle: '&#55E690%player_name%&#777777: &#FFFFFF%message%'
+      Subtitle: '%luckperms_prefix%{name_color}%player_name%{name_reset}&#777777: &#FFFFFF%message%'
       Fade-In-Ticks: 10
       Stay-Ticks: 60
       Fade-Out-Ticks: 10
@@ -35,7 +35,7 @@ Megaphone:
       Cost: 5
       Permission: 'ymchat.megaphone.bossbar'
       Display: '顶部栏'
-      Text: '&#FFB833大喇叭 &#777777| &#55E690%player_name%&#777777: &#FFFFFF%message%'
+      Text: '&#FFB833大喇叭 &#777777| %luckperms_prefix%{name_color}%player_name%{name_reset}&#777777: &#FFFFFF%message%'
       Color: YELLOW
       Style: SOLID
       Duration-Ticks: 100
@@ -56,7 +56,7 @@ Format:
   prefix:
     text: '&#777777[&#FFB833大喇叭&#777777] '
   name:
-    - text: '&#FFB833%player_name%'
+    - text: '%luckperms_prefix%{name_color}%player_name%{name_reset}'
   message:
     variants:
       - text: '&#777777» &#FFFFFF{message}'

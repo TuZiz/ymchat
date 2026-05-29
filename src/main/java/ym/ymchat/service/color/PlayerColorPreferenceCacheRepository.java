@@ -16,13 +16,15 @@ import ym.ymchat.service.crossserver.CrossServerChatService;
 
 public final class PlayerColorPreferenceCacheRepository implements PlayerColorPreferenceRepository {
 
+    private static final int LOCK_STRIPES = 64;
+
     private final PlayerColorPreferencePersistenceBackend localBackend;
     private final PlayerColorPreferencePersistenceBackend crossServerBackend;
     private final Executor asyncExecutor;
     private final Logger logger;
     private final Function<UUID, Player> playerLookup;
     private final Map<CacheKey, CachedPreferenceState> states = new ConcurrentHashMap<>();
-    private final Map<CacheKey, Object> playerLocks = new ConcurrentHashMap<>();
+    private final Object[] playerLocks = createLockStripes();
     private final AtomicLong mutationSequence = new AtomicLong();
     private final AtomicLong bindingGeneration = new AtomicLong();
     private volatile StorageMode storageMode = StorageMode.LOCAL;
@@ -278,7 +280,15 @@ public final class PlayerColorPreferenceCacheRepository implements PlayerColorPr
     }
 
     private Object lockFor(CacheKey key) {
-        return playerLocks.computeIfAbsent(key, ignored -> new Object());
+        return playerLocks[Math.floorMod(key.hashCode(), playerLocks.length)];
+    }
+
+    private static Object[] createLockStripes() {
+        Object[] locks = new Object[LOCK_STRIPES];
+        for (int index = 0; index < locks.length; index++) {
+            locks[index] = new Object();
+        }
+        return locks;
     }
 
     private enum StorageMode {
