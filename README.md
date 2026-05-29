@@ -11,6 +11,8 @@ YmChat is a chat plugin scaffold that reads YAML rules and renders clickable / h
 - Click actions: `command`, `suggest`, `url`, `copy`
 - Permission-aware inline color chat for public channels
 - Fixed per-player public chat color with permission nodes and `/ymchat color`
+- Fixed per-player name color with `/ymchat namecolor`
+- Name color tokens: `{name_color}` and `{name_reset}`
 - Megaphone channel based on the former `world` channel, with chat, title, and bossbar broadcast modes
 - Persistent megaphone balances with `/ymchat megaphone give` and `/ymchat megaphone take`
 - Configurable public chat message highlighting for keywords, price, quantity, coordinates, and time
@@ -81,9 +83,9 @@ Formats:
       command: '/tpa %player_name%'
     name:
       - condition: 'player op'
-        text: '%player_name%'
+        text: '%luckperms_prefix%{name_color}%player_name%{name_reset}'
         suggest: '@%player_name% '
-      - text: '%luckperms_prefix%%player_name%'
+      - text: '%luckperms_prefix%{name_color}%player_name%{name_reset}'
     message:
       variants:
         - condition: 'perm "group.admin"'
@@ -113,6 +115,8 @@ Condition expressions support:
 - `/ymchat debug [on|off]` toggle personal debug output
 - `/ymchat color` show current and available fixed public chat colors
 - `/ymchat color <0-f|rgbId|off|reset>` switch fixed public chat color
+- `/ymchat namecolor` show current and available fixed name colors
+- `/ymchat namecolor <0-f|rgbId|off|reset>` switch fixed name color
 - `/ymchat megaphone chat <message>` send a chat-bar megaphone broadcast
 - `/ymchat megaphone title <message>` send a title megaphone broadcast
 - `/ymchat megaphone bossbar <message>` send a bossbar megaphone broadcast
@@ -124,7 +128,7 @@ Condition expressions support:
 
 ## New config sections
 
-- `config.yml`: locale, file mapping, fixed color, mentions, cross-server, and database settings
+- `config.yml`: locale, file mapping, fixed chat/name color, mentions, cross-server, and database settings
 - `formats.yml`: public chat format rules, hover text, click actions, and message variants
 - `rules.yml`: keyword highlights, numeric highlights, anti-spam, and word filtering
 - `features.yml`: private messages, megaphone settings, and chat showcase settings
@@ -140,5 +144,7 @@ Condition expressions support:
 - 默认配置和 GUI 文件的展示文案保持内联，方便服主直接改；旧服已经写过的语言键引用仍会兼容解析。
 - Legacy fixed colors use `ymchat.color.0` through `ymchat.color.f`; RGB colors are defined by `Color-Chat.Fixed.rgb-colors`.
 - Chat color switching is command-only. Use `/ymchat color` to view available values, `/ymchat color <0-f|rgbId>` to switch, `/ymchat color off` to turn fixed color off, and `/ymchat color reset` to clear the saved preference.
+- Name color presets are configured under `Name-Color.Fixed.rgb-colors`; name color tokens only apply where the selected name section includes `{name_color}` and `{name_reset}`.
+- Name color switching is command-only. Use `/ymchat namecolor` to view available values, `/ymchat namecolor <0-f|rgbId>` to switch, `/ymchat namecolor off` to turn fixed name color off, and `/ymchat namecolor reset` to clear the saved preference.
 - `/展示` and `[i]` still only read the main-hand item; `[inv]`, `[ec]`, and `[pos]` are also public-chat-only tokens.
 - Inventory and ender chest showcase previews use `gui/showcase-preview.yml`, stay read-only, and can be opened across servers when cross-server chat storage is enabled.

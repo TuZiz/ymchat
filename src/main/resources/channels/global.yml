@@ -19,7 +19,7 @@ Format:
     command: '/tpa %player_name%'
   name:
     - condition: 'player op'
-      text: '&#FF6B6B%player_name%'
+      text: '%luckperms_prefix%{name_color}%player_name%{name_reset}'
       hover: "&#B0B0B0网络延迟: &#55E690%player_ping% 毫秒\n&#B0B0B0当前血量: &#FF6B6B%player_health_rounded% ❤\n&#FFD700点击提及这名玩家"
       suggest: '@%player_name% '
     - text: '%luckperms_prefix%{name_color}%player_name%{name_reset}'

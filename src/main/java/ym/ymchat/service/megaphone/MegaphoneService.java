@@ -17,9 +17,14 @@ import ym.ymchat.YmChatPlugin;
 import ym.ymchat.config.chat.ChatChannel;
 import ym.ymchat.config.megaphone.MegaphoneMode;
 import ym.ymchat.config.megaphone.MegaphoneSettings;
-
+import ym.ymchat.service.color.ColorScope;
+import ym.ymchat.service.color.PlayerColorService;
+import ym.ymchat.service.text.PlaceholderResolver;
 import ym.ymchat.service.text.RichText;
+
 public final class MegaphoneService {
+
+    private static final String MESSAGE_TOKEN_PLACEHOLDER = "__YMCHAT_MEGAPHONE_MESSAGE__";
 
     private final YmChatPlugin plugin;
     private final MegaphoneBalanceStore balanceStore;
@@ -309,9 +314,29 @@ public final class MegaphoneService {
 
     private String placeholders(Player sender, String message, String template) {
         String resolved = template == null || template.isBlank() ? "%message%" : template;
-        return resolved
-            .replace("%player_name%", sender.getName())
-            .replace("%message%", message);
+        String nameColor = resolveNameColor(sender);
+        String withNameTokens = resolved
+            .replace("{name_color}", nameColor)
+            .replace("{name_reset}", "&r")
+            .replace("%message%", MESSAGE_TOKEN_PLACEHOLDER);
+        return PlaceholderResolver.resolve(sender, withNameTokens).replace(MESSAGE_TOKEN_PLACEHOLDER, message);
+    }
+
+    private String resolveNameColor(Player sender) {
+        PlayerColorService colorService = plugin.getPlayerColorService();
+        if (colorService == null || plugin.getChatConfig() == null) {
+            return "&f";
+        }
+        PlayerColorService.ResolvedColor resolvedColor = colorService.resolve(
+            sender,
+            ColorScope.NAME,
+            plugin.getChatConfig().nameColorSettings(),
+            "&f"
+        );
+        if (resolvedColor == null || resolvedColor.baseColorValue() == null || resolvedColor.baseColorValue().isBlank()) {
+            return "&f";
+        }
+        return resolvedColor.baseColorValue();
     }
 
     private String modeDisplay(MegaphoneSettings.ModeSettings modeSettings, MegaphoneMode mode) {
